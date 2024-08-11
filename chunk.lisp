@@ -52,7 +52,7 @@
                 ;;          (evenp (third indices)))
                 ;;     indices
                 ;;     nil)
-        (indices-on-chunk-border-p indices width)
+                (indices-on-chunk-border-p indices width)
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)

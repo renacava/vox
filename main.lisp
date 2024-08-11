@@ -20,7 +20,7 @@
   (let* ((pos (vec4 vert 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (* 4 (sin now)) (* 6 (cos now)) -20 0))))
+         (pos (+ pos (vec4 (- (* 30 (sin now)) 15) (- (* 30 (cos now)) 15) -100 0))))
     (values (* proj pos)
             vert)))
 
@@ -42,7 +42,7 @@
 
 (defparameter *rendering-paused?* nil)
 
-(defun init (&optional (width 4))
+(defun init (&optional (width 64))
   (setf *rendering-paused?* t)
   (setf (surface-title (current-surface)) "vox")
   (try-free *my-chunk*)
@@ -50,7 +50,7 @@
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
                                                              (y (resolution (current-viewport)))
                                                              0.1
-                                                             30f0
+                                                             300f0
                                                              60f0))
   (setf *rendering-paused?* nil))
 
