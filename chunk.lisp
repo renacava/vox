@@ -47,12 +47,12 @@
                            append (loop for y below height
                                         append (loop for z below depth
                                                      collect (list x y z))))
-        collect (if (and (evenp (first indices))
-                         (evenp (second indices))
-                         (evenp (third indices)))
-                    indices
-                    nil)
-        ;;(indices-on-chunk-border-p indices width)
+        collect ;; (if (and (evenp (first indices))
+                ;;          (evenp (second indices))
+                ;;          (evenp (third indices)))
+                ;;     indices
+                ;;     nil)
+        (indices-on-chunk-border-p indices width)
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)

@@ -2,6 +2,7 @@
 
 (defparameter *projection-matrix* nil)
 (defparameter *my-chunk* nil)
+(defparameter *my-chunk2* nil)
 (defparameter *texture-atlas-tex* nil)
 (defparameter *texture-atlas-sampler* nil)
 
@@ -24,7 +25,7 @@
   (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 3 (sin now)) 1) (- (* 3 (cos now)) 0) -10 0))))
+         (pos (+ pos (vec4 (- (* 10 (sin now)) 3) (- (* 10 (cos now)) 7) -10 0))))
     (values (* proj pos)
             (block-vert-uv block-vert))))
 
@@ -40,10 +41,10 @@
 
 (defparameter *rendering-paused?* nil)
 
-(defun init (&optional (width 64))
+(defun init (&optional (width 16))
   (setf *rendering-paused?* t)
   (setf (surface-title (current-surface)) "vox")
-  (try-free-objects *my-chunk* *texture-atlas-tex* *texture-atlas-sampler*)
+  (try-free-objects *my-chunk* *my-chunk2* *texture-atlas-tex* *texture-atlas-sampler*)
   (setf *texture-atlas-tex* (or 
                              (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
                              (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
@@ -52,6 +53,7 @@
                                         :magnify-filter :nearest))
   
   (setf *my-chunk* (make-chunk :width width :offset (list 0 0 0)))
+  (setf *my-chunk2* (make-chunk :width width :offset (list 0 0 -1)))
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
                                                              (y (resolution (current-viewport)))
                                                              0.1
@@ -68,6 +70,12 @@
              :proj *projection-matrix*
              :offset (offset *my-chunk*)
              :chunk-width (width *my-chunk*)
+             :atlas-sampler *texture-atlas-sampler*)
+      (map-g #'basic-pipeline (buffer-stream *my-chunk2*)
+             :now (now)
+             :proj *projection-matrix*
+             :offset (offset *my-chunk2*)
+             :chunk-width (width *my-chunk2*)
              :atlas-sampler *texture-atlas-sampler*))
     
     (step-host)
