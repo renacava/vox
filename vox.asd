@@ -22,6 +22,7 @@
                #:deploy)
   :components ((:file "package")
                (:file "cube")
+               (:file "chunk")
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"
