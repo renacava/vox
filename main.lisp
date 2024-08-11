@@ -1,10 +1,6 @@
 (in-package #:vox)
 
-(defparameter *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
-                                                                   (y (resolution (current-viewport)))
-                                                                   0.1
-                                                                   30f0
-                                                                   60f0))
+(defparameter *projection-matrix* nil)
 
 
 (defparameter *my-chunk* nil)
@@ -19,9 +15,12 @@
                      &uniform
                      (now :float)
                      (proj :mat4)
-                     (rot :vec3))
-  (let* ((pos (* (rtg-math.matrix4:rotation-from-euler rot) (vec4 vert 1)))
-         (pos (+ pos (vec4 (* 2 (sin now)) (* 3 (cos now)) -5 0))))
+                     (offset :vec3)
+                     (chunk-width :int))
+  (let* ((pos (vec4 vert 1))
+         (offset (* offset chunk-width))
+         (pos (+ pos (vec4 offset 0)))
+         (pos (+ pos (vec4 (* 2 (sin now)) (* 3 (cos now)) -10 0))))
     (values (* proj pos)
             vert)))
 
@@ -36,24 +35,35 @@
 (defun now ()
   (float (/ (get-internal-real-time) 1000)))
 
+(defparameter *rendering-paused?* nil)
+
 (defun init (&optional (width 4))
+  (setf *rendering-paused?* t)
   (try-free *my-chunk*)
-  (setf *my-chunk* (make-chunk :width width :offset (list 1 0 0))))
+  (setf *my-chunk* (make-chunk :width width :offset (list 0 0 0)))
+  (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
+                                                             (y (resolution (current-viewport)))
+                                                             0.1
+                                                             30f0
+                                                             60f0))
+  (setf *rendering-paused?* nil))
 
 (defun step-rendering ()
-  (clear)
-  (when *my-chunk*
-    (map-g #'basic-pipeline (buffer-stream *my-chunk*)
-           :now (now)
-           :proj *projection-matrix*
-           :rot (v! (* 90 0.03 (now)) (* 90 0.02 (now)) (* 90 0.01 (now)))))
-  
-  (step-host)
-  (swap))
+  (unless *rendering-paused?*
+    (clear)
+    (when *my-chunk*
+      (map-g #'basic-pipeline (buffer-stream *my-chunk*)
+             :now (now)
+             :proj *projection-matrix*
+             :offset (offset *my-chunk*)
+             :chunk-width (width *my-chunk*)))
+    
+    (step-host)
+    (swap)))
 
 
 (defparameter main-loop-func (lambda ()
-                               ;;(step-rendering)
+                               (step-rendering)
                                (step-host)
                                (sleep 0.025)
                                ))

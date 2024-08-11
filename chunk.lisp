@@ -21,7 +21,7 @@
   (let ((mesh-data (make-chunk-buffer-stream :width width :height width :depth width)))
     (make-instance 'chunk
                    :width width
-                   :offset offset
+                   :offset (v! offset)
                    :vert-array (first mesh-data)
                    :index-array (second mesh-data)
                    :buffer-stream (third mesh-data))))
