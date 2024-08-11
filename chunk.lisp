@@ -36,7 +36,7 @@
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices))
          (mesh-data (combine-blocks-verts-and-indices blocks-verts-and-indices))
-         (verts-gpu-array (make-gpu-array (first mesh-data)))
+         (verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
     (list verts-gpu-array
           indices-gpu-array
@@ -47,12 +47,12 @@
                            append (loop for y below height
                                         append (loop for z below depth
                                                      collect (list x y z))))
-        collect ;; (if (and (evenp (first indices))
-                ;;          (evenp (second indices))
-                ;;          (evenp (third indices)))
-                ;;     indices
-                ;;     nil)
-                (indices-on-chunk-border-p indices width)
+        collect (if (and (evenp (first indices))
+                         (evenp (second indices))
+                         (evenp (third indices)))
+                    indices
+                    nil)
+        ;;(indices-on-chunk-border-p indices width)
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)

@@ -1,9 +1,9 @@
 (in-package #:vox)
 
 (defparameter *projection-matrix* nil)
-
-
 (defparameter *my-chunk* nil)
+(defparameter *texture-atlas-tex* nil)
+(defparameter *texture-atlas-sampler* nil)
 
 (defun try-free (object)
   (when object (free object)))
@@ -11,31 +11,29 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
-(defun-g vert-stage ((vert :vec3)
+(defstruct-g block-vert
+  (pos :vec3)
+  (uv :vec2))
+
+(defun-g vert-stage ((block-vert block-vert)
                      &uniform
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
                      (chunk-width :int))
-  (let* ((pos (vec4 vert 1))
+  (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 30 (sin now)) 15) (- (* 30 (cos now)) 15) -100 0))))
+         (pos (+ pos (vec4 (- (* 3 (sin now)) 1) (- (* 3 (cos now)) 0) -10 0))))
     (values (* proj pos)
-            vert)))
+            (block-vert-uv block-vert))))
 
-(defun-g frag-stage ((col :vec3))
-  (vec4 (mod (aref col 0) 2)
-        (mod (aref col 1) 2)
-        (mod (aref col 2) 2)
-        1)
-  ;; (let ((col (+ (mod col 1.0) (vec3 0.5 0.5 0.5))))
-  ;;   (vec4 col 1))
-  )
+(defun-g frag-stage ((uv :vec2) &uniform (atlas-sampler :sampler-2d))
+  (texture atlas-sampler uv))
 
 (defpipeline-g basic-pipeline ()
-  (vert-stage :vec3)
-  (frag-stage :vec3))
+  (vert-stage block-vert)
+  (frag-stage :vec2))
 
 (defun now ()
   (float (/ (get-internal-real-time) 1000)))
@@ -45,7 +43,14 @@
 (defun init (&optional (width 64))
   (setf *rendering-paused?* t)
   (setf (surface-title (current-surface)) "vox")
-  (try-free *my-chunk*)
+  (try-free-objects *my-chunk* *texture-atlas-tex* *texture-atlas-sampler*)
+  (setf *texture-atlas-tex* (or 
+                             (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
+                             (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
+  (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
+                                        :minify-filter :nearest-mipmap-nearest
+                                        :magnify-filter :nearest))
+  
   (setf *my-chunk* (make-chunk :width width :offset (list 0 0 0)))
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
                                                              (y (resolution (current-viewport)))
@@ -62,7 +67,8 @@
              :now (now)
              :proj *projection-matrix*
              :offset (offset *my-chunk*)
-             :chunk-width (width *my-chunk*)))
+             :chunk-width (width *my-chunk*)
+             :atlas-sampler *texture-atlas-sampler*))
     
     (step-host)
     (swap)))
