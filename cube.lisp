@@ -59,5 +59,7 @@
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let ((vert-vecs (mapcar #'first blocks-verts-and-indices))
         (index-lists (mapcar #'second blocks-verts-and-indices)))
-    (list (apply #'concatenate 'vector vert-vecs)
+    (list ;;(apply #'concatenate 'vector vert-vecs)
+     (loop for vert-list in vert-vecs
+           append vert-list)
           (apply #'concatenate 'list index-lists))))

@@ -112,13 +112,12 @@
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices))
          (mesh-data (combine-blocks-verts-and-indices blocks-verts-and-indices))
-         (verts-gpu-array (make-gpu-array (coerce (first mesh-data) 'list)))
-         (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
+         (verts-gpu-array (make-gpu-array (first mesh-data)))
+         (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint))
+         )
     (list verts-gpu-array
           indices-gpu-array
           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))
-    
-    
     ))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
