@@ -43,7 +43,30 @@
           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
-  (loop for x below width
-        append (loop for y below height
-                     append (loop for z below depth
-                                  collect (list x y z)))))
+  (loop for indices in (loop for x below width
+                           append (loop for y below height
+                                        append (loop for z below depth
+                                                     collect (list x y z))))
+        collect ;; (if (and (evenp (first indices))
+                ;;          (evenp (second indices))
+                ;;          (evenp (third indices)))
+                ;;     indices
+                ;;     nil)
+        (indices-on-chunk-border-p indices width)
+        ))
+
+(defun indices-on-chunk-border-p (indices chunk-width)
+  "Returns indices if on the border of the chunk, assuming cubic chunk, else nil."
+  (let ((x (first indices))
+        (y (second indices))
+        (z (third indices))
+        (border (1- chunk-width)))
+    (if (or (= x 0)
+            (= x border)
+            (= y 0)
+            (= y border)
+            (= z 0)
+            (= z border))
+        indices
+        nil)))
+  

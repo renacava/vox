@@ -52,9 +52,11 @@
                 collect (+ index index-offset))))
 
 (defun make-blocks-verts-and-indices (offsets)
-  (loop for offset in offsets
-        for index-offset from 0
-        collect (make-block-verts-and-indices (first offset) (second offset) (third offset) index-offset)))
+  (let ((index-offset -1))
+    (loop for offset in offsets
+          when offset
+          collect (make-block-verts-and-indices (first offset) (second offset) (third offset) (incf index-offset))))
+  )
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let ((vert-vecs (mapcar #'first blocks-verts-and-indices))

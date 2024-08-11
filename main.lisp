@@ -20,13 +20,18 @@
   (let* ((pos (vec4 vert 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (* 2 (sin now)) (* 3 (cos now)) -10 0))))
+         (pos (+ pos (vec4 (* 4 (sin now)) (* 6 (cos now)) -20 0))))
     (values (* proj pos)
             vert)))
 
 (defun-g frag-stage ((col :vec3))
-  (let ((col (+ col (vec3 0.5 0.5 0.5))))
-    (vec4 col 1)))
+  (vec4 (mod (aref col 0) 2)
+        (mod (aref col 1) 2)
+        (mod (aref col 2) 2)
+        1)
+  ;; (let ((col (+ (mod col 1.0) (vec3 0.5 0.5 0.5))))
+  ;;   (vec4 col 1))
+  )
 
 (defpipeline-g basic-pipeline ()
   (vert-stage :vec3)
@@ -39,6 +44,7 @@
 
 (defun init (&optional (width 4))
   (setf *rendering-paused?* t)
+  (setf (surface-title (current-surface)) "vox")
   (try-free *my-chunk*)
   (setf *my-chunk* (make-chunk :width width :offset (list 0 0 0)))
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -64,8 +70,8 @@
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 ;;(step-rendering)
-                                 ;;(step-host)
+                                 (step-rendering)
+                                 (step-host)
                                  (livesupport:update-repl-link)
                                  (sleep 0.025))
                                
@@ -73,7 +79,7 @@
                                ))
 
 (defun main ()
-  (cepl:repl)
+  (cepl:repl 720 480)
   (init)
   (loop (funcall main-loop-func)))
 
