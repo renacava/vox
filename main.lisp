@@ -63,9 +63,13 @@
 
 
 (defparameter main-loop-func (lambda ()
-                               (step-rendering)
-                               (step-host)
-                               (sleep 0.025)
+                               (livesupport:continuable
+                                 ;;(step-rendering)
+                                 ;;(step-host)
+                                 (livesupport:update-repl-link)
+                                 (sleep 0.025))
+                               
+
                                ))
 
 (defun main ()
