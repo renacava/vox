@@ -19,7 +19,9 @@
                #:rtg-math
                #:sdl2-game-controller-db
                #:fiveam
-               #:deploy)
+               #:deploy
+               #:lparallel
+               #:precise-time)
   :components ((:file "package")
                (:file "cube")
                (:file "chunk")

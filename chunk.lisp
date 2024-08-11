@@ -42,6 +42,20 @@
           indices-gpu-array
           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
 
+(defun make-chunk-mesh-data (&key (width 2) (height 2) (depth 2))
+  "Returns the mesh-data for a chunk of the given dimensions."
+  (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
+         (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices)))
+    (combine-blocks-verts-and-indices blocks-verts-and-indices)))
+
+(defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
+  "Returns a buffer-stream object for a chunk based off of mesh-data."
+  (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
+         (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
+    (list verts-gpu-array
+          indices-gpu-array
+          (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
+
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
   (loop for indices in (loop for x below width
                            append (loop for y below height
