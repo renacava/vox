@@ -142,7 +142,9 @@
                                    (livesupport:update-repl-link)
                                    ;;(sleep 0.25)
                                    (setf *delta* (- (now) start-time))
-                                   (setf *fps* (truncate (/ 1.0 *delta*)))))))
+                                   (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
+                                                                    1.0
+                                                                    *delta*))))))))
 
 (defun main ()
   (cepl:repl 720 480)
