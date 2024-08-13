@@ -14,6 +14,9 @@
      ,@body
      (setf *rendering-paused?* prior-state)))
 
+(defun setup-lparallel-kernel (&optional (worker-threads 16))
+  (unless lparallel:*kernel*
+    (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
 (defun try-free (object)
   (when object (free object)))
@@ -34,7 +37,7 @@
   (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 1100 (sin now)) 1050) (- (* 60 (cos now)) 55) -200 0))))
+         (pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0))))
     (values (* proj pos)
             (block-vert-uv block-vert))))
 
@@ -52,18 +55,10 @@
                            (get-precise-time)
                          (+ (* seconds precise-time-units-per-second) subseconds))
                        (* precise-time-units-per-second 100000))))
-      10000000))
-  ;; (float (/ (get-internal-real-time) 1000))
-  )
+      10000000)))
 
 (defun make-chunks (radius &optional (width 8))
-  (mapcar #'try-free *my-chunks*)
-  (setf *my-chunks* (loop for i below radius
-                          append (loop for j below radius
-                                       collect (make-chunk :width width :offset (list i 0 (- j))))
-                          )))
-
-(defun make-chunks-batched (radius &optional (width 8))
+  (setup-lparallel-kernel)
   (with-paused-rendering
     (mapcar #'try-free *my-chunks*)
     (setf *my-chunks* nil))
@@ -71,30 +66,7 @@
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
                                            collect (list i 0 (- j)))))
-         (offset-groups (group chunk-offsets 4)))
-    (loop for offset-group in offset-groups
-          do (let ((chunks (loop for offset in offset-group
-                                 collect (let* ((mesh-data (make-chunk-mesh-data :width width))
-                                                (buffer-stream-and-arrays (make-chunk-buffer-stream-from-mesh-data mesh-data)))
-                                           (make-instance 'chunk
-                                                          :width width
-                                                          :offset (v! offset)
-                                                          :vert-array (first buffer-stream-and-arrays)
-                                                          :index-array (second buffer-stream-and-arrays)
-                                                          :buffer-stream (third buffer-stream-and-arrays))))))
-               (with-paused-rendering
-                 (loop for chunk in chunks
-                       do (push chunk *my-chunks*)))))))
-
-(defun make-chunks-batched-parallel (radius &optional (width 8))
-  (with-paused-rendering
-    (mapcar #'try-free *my-chunks*)
-    (setf *my-chunks* nil))
-
-  (let* ((chunk-offsets (loop for i below radius
-                              append (loop for j below radius
-                                           collect (list i 0 (- j)))))
-         (offset-groups (group chunk-offsets 4)))
+         (offset-groups (group chunk-offsets 32)))
     (loop for offset-group in offset-groups
           do (let* ((mesh-datas (lparallel:pmapcar (lambda (offset) (make-chunk-mesh-data :width width)) offset-group))
                     (chunks (loop for offset in offset-group
@@ -105,51 +77,10 @@
                                                            :offset (v! offset)
                                                            :vert-array (first buffer-stream-and-arrays)
                                                            :index-array (second buffer-stream-and-arrays)
-                                                           :buffer-stream (third buffer-stream-and-arrays)))
-                                  )))
-               (with-paused-rendering
-                 (loop for chunk in chunks
-                       do (push chunk *my-chunks*)))
-               )
-          
-
-
-          )))
-
-(defun make-chunks-parallel (radius &optional (width 8))
-  (unless lparallel:*kernel*
-    (setf lparallel:*kernel* (lparallel:make-kernel 16)))
-  (mapcar (lambda (chunk)
-            (setf *rendering-paused?* t)
-            (try-free chunk)
-            (setf *rendering-paused?* nil))
-          *my-chunks*)
-  (setf *my-chunks* nil)
-  (let* ((offsets (loop for i below radius
-                       append (loop for j below radius
-                                    collect (list i 0 (- j)))))
-         (mesh-datas-and-offsets (lparallel:pmapcar (lambda (offset)
-                                          (list (make-chunk-mesh-data :width width
-                                                                      :height width
-                                                                      :depth width)
-                                                offset))
-                                                    offsets))
-         )
-    (loop for data in mesh-datas-and-offsets
-          do (push
-              (let* ((mesh-data (first data))
-                     (buffer-stream-and-arrays (make-chunk-buffer-stream-from-mesh-data mesh-data))
-                     (offset (second data)))
-                (make-instance 'chunk
-                               :width width
-                               :offset (v! offset)
-                               :vert-array (first buffer-stream-and-arrays)
-                               :index-array (second buffer-stream-and-arrays)
-                               :buffer-stream (third buffer-stream-and-arrays)))
-              *my-chunks*))
-    
-    ;;(setf *my-chunks* chunks)
-    ))
+                                                           :buffer-stream (third buffer-stream-and-arrays))))))
+               (loop for chunk in chunks
+                     do (push chunk *my-chunks*))
+               ))))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -168,13 +99,9 @@
     (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                           :minify-filter :nearest-mipmap-nearest
                                           :magnify-filter :nearest))
-    (setup-projection-matrix)
-    )
+    (setup-projection-matrix))
   
-
-  ;;(make-chunks-batched radius width)
-  (make-chunks-batched-parallel radius width)
-  )
+  (make-chunks radius width))
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
