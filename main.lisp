@@ -34,7 +34,7 @@
   (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 70 (sin now)) 60) (- (* 15 (cos now)) 7) -20 0))))
+         (pos (+ pos (vec4 (- (* 1100 (sin now)) 1050) (- (* 60 (cos now)) 55) -200 0))))
     (values (* proj pos)
             (block-vert-uv block-vert))))
 
@@ -126,6 +126,13 @@
     ;;(setf *my-chunks* chunks)
     ))
 
+(defun setup-projection-matrix ()
+  (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
+                                                             (y (resolution (current-viewport)))
+                                                             0.1
+                                                             10000f0
+                                                             60f0)))
+
 (defun init (&optional (width 16) (radius 8))
   (with-paused-rendering
     (setf (surface-title (current-surface)) "vox")
@@ -136,11 +143,8 @@
     (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                           :minify-filter :nearest-mipmap-nearest
                                           :magnify-filter :nearest))
-    (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
-                                                               (y (resolution (current-viewport)))
-                                                               0.1
-                                                               300f0
-                                                               60f0)))
+    (setup-projection-matrix)
+    )
   
 
   (make-chunks-batched radius width))
@@ -169,15 +173,21 @@
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 (let ((start-time (now)))
-                                   (step-rendering)
-                                   (step-host)
-                                   (livesupport:update-repl-link)
-                                   ;;(sleep 0.25)
-                                   (setf *delta* (- (now) start-time))
-                                   (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
-                                                                    1.0
-                                                                    *delta*))))))))
+                                 (if *rendering-paused?*
+                                     (progn
+                                       (step-host)
+                                       (livesupport:update-repl-link)
+                                       (sleep 0.25))
+                                     (let ((start-time (now)))
+                                       (step-rendering)
+                                       (step-host)
+                                       (livesupport:update-repl-link)
+                                       ;;(sleep 0.25)
+                                       (setf *delta* (- (now) start-time))
+                                       (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
+                                                                        1.0
+                                                                        *delta*))))))
+                                 )))
 
 (defun main ()
   (cepl:repl 720 480)
