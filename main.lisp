@@ -6,6 +6,14 @@
 (defparameter *my-chunks* nil)
 (defparameter *texture-atlas-tex* nil)
 (defparameter *texture-atlas-sampler* nil)
+(defparameter *rendering-paused?* nil)
+
+(defmacro with-paused-rendering (&body body)
+  `(let ((prior-state *rendering-paused?*))
+     (setf *rendering-paused?* t)
+     ,@body
+     (setf *rendering-paused?* prior-state)))
+
 
 (defun try-free (object)
   (when object (free object)))
@@ -48,14 +56,40 @@
   ;; (float (/ (get-internal-real-time) 1000))
   )
 
-(defparameter *rendering-paused?* nil)
-
 (defun make-chunks (radius &optional (width 8))
   (mapcar #'try-free *my-chunks*)
   (setf *my-chunks* (loop for i below radius
                           append (loop for j below radius
                                        collect (make-chunk :width width :offset (list i 0 (- j))))
                           )))
+
+(defun make-chunks-batched (radius &optional (width 8))
+
+  (with-paused-rendering
+    (mapcar #'try-free *my-chunks*)
+    (setf *my-chunks* nil))
+  
+  (loop for i below radius
+        append (loop for j below radius
+                     do (let* ((mesh-data (make-chunk-mesh-data :width width))
+                               (offset (list i 0 (- j)))
+                               (buffer-stream-and-arrays (make-chunk-buffer-stream-from-mesh-data mesh-data))
+                               (chunk (make-instance 'chunk
+                                                     :width width
+                                                     :offset (v! offset)
+                                                     :vert-array (first buffer-stream-and-arrays)
+                                                     :index-array (second buffer-stream-and-arrays)
+                                                     :buffer-stream (third buffer-stream-and-arrays))))
+                          (with-paused-rendering
+                            (push chunk *my-chunks*))
+                          
+                          )))
+  
+  ;; (setf *my-chunks* (loop for i below radius
+  ;;                         append (loop for j below radius
+  ;;                                      collect (make-chunk :width width :offset (list i 0 (- j))))
+  ;;                         ))
+  )
 
 (defun make-chunks-parallel (radius &optional (width 8))
   (unless lparallel:*kernel*
@@ -93,25 +127,23 @@
     ))
 
 (defun init (&optional (width 16) (radius 8))
-  (setf *rendering-paused?* t)
-  (setf (surface-title (current-surface)) "vox")
-  (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
-  (setf *texture-atlas-tex* (or 
-                             (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
-                             (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
-  (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
-                                        :minify-filter :nearest-mipmap-nearest
-                                        :magnify-filter :nearest))
+  (with-paused-rendering
+    (setf (surface-title (current-surface)) "vox")
+    (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
+    (setf *texture-atlas-tex* (or 
+                               (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
+                               (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
+    (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
+                                          :minify-filter :nearest-mipmap-nearest
+                                          :magnify-filter :nearest))
+    (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
+                                                               (y (resolution (current-viewport)))
+                                                               0.1
+                                                               300f0
+                                                               60f0)))
   
-  ;; (setf *my-chunk* (make-chunk :width width :offset (list 0 0 0)))
-  ;; (setf *my-chunk2* (make-chunk :width width :offset (list 0 0 -1)))
-  (make-chunks-parallel radius width)
-  (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
-                                                             (y (resolution (current-viewport)))
-                                                             0.1
-                                                             300f0
-                                                             60f0))
-  (setf *rendering-paused?* nil))
+
+  (make-chunks-batched radius width))
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
@@ -121,12 +153,13 @@
     (clear)
 
     (loop for chunk in *my-chunks*
-          do (map-g #'basic-pipeline (buffer-stream chunk)
-                    :now (now)
-                    :proj *projection-matrix*
-                    :offset (offset chunk)
-                    :chunk-width (width chunk)
-                    :atlas-sampler *texture-atlas-sampler*))
+          do (when (buffer-stream chunk)
+               (map-g #'basic-pipeline (buffer-stream chunk)
+                      :now (now)
+                      :proj *projection-matrix*
+                      :offset (offset chunk)
+                      :chunk-width (width chunk)
+                      :atlas-sampler *texture-atlas-sampler*)))
     
     (step-host)
     (swap)
