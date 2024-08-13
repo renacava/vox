@@ -64,15 +64,14 @@
                           )))
 
 (defun make-chunks-batched (radius &optional (width 8))
-
   (with-paused-rendering
     (mapcar #'try-free *my-chunks*)
     (setf *my-chunks* nil))
 
   (let* ((chunk-offsets (loop for i below radius
-                             append (loop for j below radius
-                                          collect (list i 0 (- j)))))
-        (offset-groups (group chunk-offsets 4)))
+                              append (loop for j below radius
+                                           collect (list i 0 (- j)))))
+         (offset-groups (group chunk-offsets 4)))
     (loop for offset-group in offset-groups
           do (let ((chunks (loop for offset in offset-group
                                  collect (let* ((mesh-data (make-chunk-mesh-data :width width))
@@ -86,6 +85,36 @@
                (with-paused-rendering
                  (loop for chunk in chunks
                        do (push chunk *my-chunks*)))))))
+
+(defun make-chunks-batched-parallel (radius &optional (width 8))
+  (with-paused-rendering
+    (mapcar #'try-free *my-chunks*)
+    (setf *my-chunks* nil))
+
+  (let* ((chunk-offsets (loop for i below radius
+                              append (loop for j below radius
+                                           collect (list i 0 (- j)))))
+         (offset-groups (group chunk-offsets 4)))
+    (loop for offset-group in offset-groups
+          do (let* ((mesh-datas (lparallel:pmapcar (lambda (offset) (make-chunk-mesh-data :width width)) offset-group))
+                    (chunks (loop for offset in offset-group
+                                  for mesh-data in mesh-datas
+                                  collect (let ((buffer-stream-and-arrays (make-chunk-buffer-stream-from-mesh-data mesh-data)))
+                                            (make-instance 'chunk
+                                                           :width width
+                                                           :offset (v! offset)
+                                                           :vert-array (first buffer-stream-and-arrays)
+                                                           :index-array (second buffer-stream-and-arrays)
+                                                           :buffer-stream (third buffer-stream-and-arrays)))
+                                  )))
+               (with-paused-rendering
+                 (loop for chunk in chunks
+                       do (push chunk *my-chunks*)))
+               )
+          
+
+
+          )))
 
 (defun make-chunks-parallel (radius &optional (width 8))
   (unless lparallel:*kernel*
@@ -143,7 +172,9 @@
     )
   
 
-  (make-chunks-batched radius width))
+  ;;(make-chunks-batched radius width)
+  (make-chunks-batched-parallel radius width)
+  )
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
