@@ -23,6 +23,7 @@
                #:lparallel
                #:precise-time)
   :components ((:file "package")
+               (:file "utilities")
                (:file "cube")
                (:file "chunk")
                (:file "main"))
