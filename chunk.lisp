@@ -36,7 +36,7 @@
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices))
          (mesh-data (combine-blocks-verts-and-indices blocks-verts-and-indices))
-         (verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
+         (verts-gpu-array (make-gpu-array (first mesh-data)  :element-type :vec2))
          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
     (list verts-gpu-array
           indices-gpu-array
@@ -50,7 +50,7 @@
 
 (defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
   "Returns a buffer-stream object for a chunk based off of mesh-data."
-  (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
+  (let* ((verts-gpu-array (make-gpu-array (first mesh-data)))
          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
     (list verts-gpu-array
           indices-gpu-array

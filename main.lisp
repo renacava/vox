@@ -24,30 +24,40 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
-(defstruct-g block-vert
-  (pos :vec3)
-  (uv :vec2))
+(defun-g index-to-xyz-g ((index :float))
+  (vec3 (int (mod index 64))
+        (int (mod (/ index 64) 64))
+        (int (mod (/ (/ index 64) 64) 64))))
 
-(defun-g vert-stage ((block-vert block-vert)
+(defun-g index-to-xy-g ((index :float))
+  (vec2 (int (mod index 64))
+        (int (mod (/ index 64) 64))))
+
+(defun-g vert-stage ((vert :vec2)
                      &uniform
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
                      (chunk-width :int))
-  (let* ((pos (vec4 (block-vert-pos block-vert) 1))
+  (let* ((pos (vec4 (index-to-xyz-g (aref vert 0)) 1))
          (offset (* offset chunk-width))
+         ;;(offset (* offset (+ 1.5 (sin now)) 2))
          (pos (+ pos (vec4 offset 0)))
-         ;;(pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
-         (pos (+ pos (vec4 -127 (+ 70 (* 120 (sin now))) -170 0)))
+         ;;(pos (+ pos (vec4 1 1 -50 0)))
+         (uv (index-to-xy-g (aref vert 1)))
+         (uv (* 0.5 uv))
+         (pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
+         ;;(pos (+ pos (vec4 -322 (+ -100 (* 190 (+ 2 (sin now)))) (* -250 (- 1.06 (sin now))) 0)))
          )
     (values (* proj pos)
-            (block-vert-uv block-vert))))
+            uv)))
+
 
 (defun-g frag-stage ((uv :vec2) &uniform (atlas-sampler :sampler-2d))
   (texture atlas-sampler uv))
 
 (defpipeline-g basic-pipeline ()
-  (vert-stage block-vert)
+  (vert-stage :vec2)
   (frag-stage :vec2))
 
 (defun now ()
@@ -57,7 +67,7 @@
                            (get-precise-time)
                          (+ (* seconds precise-time-units-per-second) subseconds))
                        (* precise-time-units-per-second 100000))))
-      10000000)))
+      60000000)))
 
 (defun make-chunks (radius &optional (width 8))
   (setup-lparallel-kernel)
@@ -142,34 +152,14 @@
                                                             (make-instance 'chunk
                                                                            :width width
                                                                            :offset offset
-                                                                           :vert-array (make-gpu-array (first mesh-data) :element-type 'block-vert)
+                                                                           :vert-array (make-gpu-array (first mesh-data))
                                                                            :index-array (make-gpu-array (second mesh-data) :element-type :uint)
                                                                            :buffer-stream nil))))
                                                (try-free-objects (first mesh-data) (second mesh-data))
                                                (push chunk *my-chunks*)
                                                (gl:finish))
                                              
-                                             (sleep 0.001))
-                                         
-                                         ;; (if dirty?
-                                         ;;     (progn
-                                         ;;       (setf flipflop (not flipflop))
-                                         ;;       (setf dirty? nil)
-
-                                         ;;       (loop for )
-                                               
-                                         ;;       ;; (if my-second-array
-                                         ;;       ;;     (progn
-                                         ;;       ;;       (try-free my-second-array)
-                                         ;;       ;;       (setf my-second-array nil))
-                                                   
-                                         ;;       ;;     (progn
-                                         ;;       ;;       (setf my-second-array (make-gpu-array cube-2))
-                                         ;;       ;;       (gl:finish)))
-                                         ;;       )
-                                             
-                                         ;;     (sleep 0.1))
-                                         ))
+                                             (sleep 0.001))))
 
 (defun init-ctx ()
   (setf ctx (or ctx (cepl.context:make-context-shared-with-current-context))))
