@@ -37,7 +37,9 @@
   (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0))))
+         ;;(pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
+         (pos (+ pos (vec4 -130 (+ -50 (* 30 (sin now))) -150 0)))
+         )
     (values (* proj pos)
             (block-vert-uv block-vert))))
 
