@@ -37,7 +37,9 @@
   (let* ((pos (vec4 (block-vert-pos block-vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
-         (pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0))))
+         ;;(pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
+         (pos (+ pos (vec4 (- 130) -50 -150 0)))
+         )
     (values (* proj pos)
             (block-vert-uv block-vert))))
 
@@ -59,28 +61,17 @@
 
 (defun make-chunks (radius &optional (width 8))
   (setup-lparallel-kernel)
-  (with-paused-rendering
-    (mapcar #'try-free *my-chunks*)
-    (setf *my-chunks* nil))
-
+  (mapcar #'try-free *my-chunks*)
+  (setf *my-chunks* nil)
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
                                            collect (list i 0 (- j)))))
          (offset-groups (group chunk-offsets 32)))
     (loop for offset-group in offset-groups
-          do (let* ((mesh-datas (lparallel:pmapcar (lambda (offset) (make-chunk-mesh-data :width width)) offset-group))
-                    (chunks (loop for offset in offset-group
-                                  for mesh-data in mesh-datas
-                                  collect (let ((buffer-stream-and-arrays (make-chunk-buffer-stream-from-mesh-data mesh-data)))
-                                            (make-instance 'chunk
-                                                           :width width
-                                                           :offset (v! offset)
-                                                           :vert-array (first buffer-stream-and-arrays)
-                                                           :index-array (second buffer-stream-and-arrays)
-                                                           :buffer-stream (third buffer-stream-and-arrays))))))
-               (loop for chunk in chunks
-                     do (push chunk *my-chunks*))
-               ))))
+          do (lparallel:pmapcar (lambda (offset) (let ((mesh-data (make-chunk-mesh-data :width width)))
+                                                   (queue-chunk mesh-data offset width)))
+                                offset-group)))
+  )
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -101,7 +92,8 @@
                                           :magnify-filter :nearest))
     (setup-projection-matrix))
   
-  (make-chunks radius width))
+  (make-chunks radius width)
+  )
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
@@ -111,7 +103,11 @@
     (clear)
 
     (loop for chunk in *my-chunks*
-          do (when (buffer-stream chunk)
+          do (progn
+               (unless (buffer-stream chunk)
+                 (when (and (vert-array chunk) (index-array chunk))
+                   (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk))))
+                 )
                (map-g #'basic-pipeline (buffer-stream chunk)
                       :now (now)
                       :proj *projection-matrix*
@@ -120,9 +116,65 @@
                       :atlas-sampler *texture-atlas-sampler*)))
     
     (step-host)
-    (swap)
-    
-))
+    (swap)))
+
+(defparameter ctx nil)
+(defparameter dirty? nil)
+(defparameter flipflop nil)
+(defparameter queued-chunks nil)
+(defparameter half-baked-chunks nil)
+
+(defun queue-chunk (mesh-data offset width)
+  (push (list mesh-data offset width) queued-chunks))
+
+(defparameter inner-loader-thread-func (lambda ()
+                                         (if queued-chunks
+                                             (let* ((queued-chunk (pop queued-chunks))
+                                                    (mesh-data (first queued-chunk))
+                                                    (offset (v! (second queued-chunk)))
+                                                    (width (third queued-chunk))
+                                                    (chunk (make-instance 'chunk
+                                                                          :width width
+                                                                          :offset offset
+                                                                          :vert-array (make-gpu-array (first mesh-data) :element-type 'block-vert)
+                                                                          :index-array (make-gpu-array (second mesh-data) :element-type :uint)
+                                                                          :buffer-stream nil)))
+                                               (push chunk *my-chunks*)
+                                               (gl:finish))
+                                             
+                                             (sleep 0.001))
+                                         
+                                         ;; (if dirty?
+                                         ;;     (progn
+                                         ;;       (setf flipflop (not flipflop))
+                                         ;;       (setf dirty? nil)
+
+                                         ;;       (loop for )
+                                               
+                                         ;;       ;; (if my-second-array
+                                         ;;       ;;     (progn
+                                         ;;       ;;       (try-free my-second-array)
+                                         ;;       ;;       (setf my-second-array nil))
+                                                   
+                                         ;;       ;;     (progn
+                                         ;;       ;;       (setf my-second-array (make-gpu-array cube-2))
+                                         ;;       ;;       (gl:finish)))
+                                         ;;       )
+                                             
+                                         ;;     (sleep 0.1))
+                                         ))
+
+(defun init-ctx ()
+  (setf ctx (or ctx (cepl.context:make-context-shared-with-current-context))))
+
+(defun make-loader-thread ()
+  (init-ctx)
+  
+  (bt:make-thread (lambda ()
+                    (with-cepl-context (loader-context ctx)
+                      (loop (livesupport:continuable (funcall inner-loader-thread-func)))))))
+
+
 
 
 (defparameter main-loop-func (lambda ()
@@ -145,6 +197,7 @@
 (defun main ()
   (cepl:repl 720 480)
   (init)
+  (make-loader-thread)
   (loop (funcall main-loop-func)))
 
 
