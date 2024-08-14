@@ -38,7 +38,7 @@
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          ;;(pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
-         (pos (+ pos (vec4 -130 (+ -50 (* 30 (sin now))) -150 0)))
+         (pos (+ pos (vec4 -127 (+ 70 (* 120 (sin now))) -170 0)))
          )
     (values (* proj pos)
             (block-vert-uv block-vert))))
@@ -66,8 +66,10 @@
   (setf *my-chunks* nil)
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
-                                           collect (list i 0 (- j)))))
-         (offset-groups (group chunk-offsets 2)))
+                                           append (loop for k below radius
+                                                        collect (list j (truncate (- i)) (- k)))
+                                           )))
+         (offset-groups (group chunk-offsets 16)))
     (bt:make-thread
      (lambda ()
        (loop for offset-group in offset-groups
@@ -106,7 +108,7 @@
     (clear)
 
     (loop for chunk in *my-chunks*
-          do (progn
+          do (when chunk
                (unless (buffer-stream chunk)
                  (when (and (vert-array chunk) (index-array chunk))
                    (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk))))
@@ -136,12 +138,13 @@
                                                     (mesh-data (first queued-chunk))
                                                     (offset (v! (second queued-chunk)))
                                                     (width (third queued-chunk))
-                                                    (chunk (make-instance 'chunk
-                                                                          :width width
-                                                                          :offset offset
-                                                                          :vert-array (make-gpu-array (first mesh-data) :element-type 'block-vert)
-                                                                          :index-array (make-gpu-array (second mesh-data) :element-type :uint)
-                                                                          :buffer-stream nil)))
+                                                    (chunk (ignore-errors
+                                                            (make-instance 'chunk
+                                                                           :width width
+                                                                           :offset offset
+                                                                           :vert-array (make-gpu-array (first mesh-data) :element-type 'block-vert)
+                                                                           :index-array (make-gpu-array (second mesh-data) :element-type :uint)
+                                                                           :buffer-stream nil))))
                                                (try-free-objects (first mesh-data) (second mesh-data))
                                                (push chunk *my-chunks*)
                                                (gl:finish))
