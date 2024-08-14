@@ -67,6 +67,5 @@
   (let ((vert-vecs (mapcar #'first blocks-verts-and-indices))
         (index-lists (mapcar #'second blocks-verts-and-indices)))
     (list ;;(apply #'concatenate 'vector vert-vecs)
-     (loop for vert-list in vert-vecs
-           append vert-list)
-          (apply #'concatenate 'list index-lists))))
+     (make-c-array (loop for vert-list in vert-vecs append vert-list) :element-type 'block-vert)
+     (make-c-array (apply #'concatenate 'list index-lists) :element-type :uint))))

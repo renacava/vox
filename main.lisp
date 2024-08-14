@@ -38,7 +38,7 @@
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          ;;(pos (+ pos (vec4 (- (* 100 (sin now)) 95) (- (* 12 (cos now)) 8) -20 0)))
-         (pos (+ pos (vec4 (- 130) -50 -150 0)))
+         (pos (+ pos (vec4 -130 (+ -50 (* 30 (sin now))) -150 0)))
          )
     (values (* proj pos)
             (block-vert-uv block-vert))))
@@ -61,16 +61,20 @@
 
 (defun make-chunks (radius &optional (width 8))
   (setup-lparallel-kernel)
-  (mapcar #'try-free *my-chunks*)
+  ;;(mapcar #'try-free *my-chunks*)
+  ;;(loop for chunk in *my-chunks* do (ignore-errors (try-free chunk)))
   (setf *my-chunks* nil)
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
                                            collect (list i 0 (- j)))))
-         (offset-groups (group chunk-offsets 32)))
-    (loop for offset-group in offset-groups
-          do (lparallel:pmapcar (lambda (offset) (let ((mesh-data (make-chunk-mesh-data :width width)))
-                                                   (queue-chunk mesh-data offset width)))
-                                offset-group)))
+         (offset-groups (group chunk-offsets 2)))
+    (bt:make-thread
+     (lambda ()
+       (loop for offset-group in offset-groups
+             do (lparallel:pmapcar (lambda (offset) (let ((mesh-data (make-chunk-mesh-data :width width)))
+                                                      (queue-chunk mesh-data offset width)))
+                                   offset-group))))
+    )
   )
 
 (defun setup-projection-matrix ()
@@ -81,16 +85,15 @@
                                                              60f0)))
 
 (defun init (&optional (width 16) (radius 8))
-  (with-paused-rendering
-    (setf (surface-title (current-surface)) "vox")
-    (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
-    (setf *texture-atlas-tex* (or 
-                               (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
-                               (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
-    (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
-                                          :minify-filter :nearest-mipmap-nearest
-                                          :magnify-filter :nearest))
-    (setup-projection-matrix))
+  (setf (surface-title (current-surface)) "vox")
+  (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
+  (setf *texture-atlas-tex* (or 
+                             (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
+                             (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
+  (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
+                                        :minify-filter :nearest-mipmap-nearest
+                                        :magnify-filter :nearest))
+  (setup-projection-matrix)
   
   (make-chunks radius width)
   )
@@ -139,6 +142,7 @@
                                                                           :vert-array (make-gpu-array (first mesh-data) :element-type 'block-vert)
                                                                           :index-array (make-gpu-array (second mesh-data) :element-type :uint)
                                                                           :buffer-stream nil)))
+                                               (try-free-objects (first mesh-data) (second mesh-data))
                                                (push chunk *my-chunks*)
                                                (gl:finish))
                                              
