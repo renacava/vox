@@ -21,7 +21,9 @@
   (let ((mesh-data (make-chunk-buffer-stream :width width :height width :depth width)))
     (make-instance 'chunk
                    :width width
-                   :offset (v! offset)
+                   :offset (vec3 (float (first offset))
+                                 (float (second offset))
+                                 (float (third offset)))
                    :vert-array (first mesh-data)
                    :index-array (second mesh-data)
                    :buffer-stream (third mesh-data))))
@@ -46,7 +48,8 @@
   "Returns the mesh-data for a chunk of the given dimensions."
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices)))
-    (combine-blocks-verts-and-indices blocks-verts-and-indices)))
+    (combine-blocks-verts-and-indices blocks-verts-and-indices)
+    ))
 
 (defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
   "Returns a buffer-stream object for a chunk based off of mesh-data."
@@ -57,30 +60,38 @@
           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
-  (loop for indices in (loop for x below width
-                           append (loop for y below height
-                                        append (loop for z below depth
-                                                     collect (list x y z))))
-        collect (if (and (evenp (first indices))
-                         (evenp (second indices))
-                         (evenp (third indices)))
-                    indices
-                    nil)
-        ;;(indices-on-chunk-border-p indices width)
+  (loop for indices in
+        (loop for x below width
+              append (loop for y below height
+                           append (loop for z below depth
+                                        collect (make-array 3 :element-type 'fixnum  :initial-contents (vector x y z)))))
+        collect (let ((result
+                        ;; (if (and (evenp (first indices))
+                        ;;          (evenp (second indices))
+                        ;;          (evenp (third indices)))
+                        ;;     indices
+                        ;;     nil)
+                        (indices-on-chunk-border-p indices width)))
+                  (when result (vec3-to-index result)))
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)
   "Returns indices if on the border of the chunk, assuming cubic chunk, else nil."
-  (let ((x (first indices))
-        (y (second indices))
-        (z (third indices))
+  (declare (optimize (speed 3) (safety 0)))
+  (declare (type fixnum chunk-width))
+  (declare (type (simple-array fixnum) indices))
+
+  (let ((x (aref indices 0))
+        (y (aref indices 1))
+        (z (aref indices 2))
         (border (1- chunk-width)))
+    (declare (type fixnum x y z border))
     (if (or (= x 0)
-            (= x border)
             (= y 0)
-            (= y border)
             (= z 0)
-            (= z border))
+            (= z border)
+            (= y border)
+            (= x border))
         indices
         nil)))
   

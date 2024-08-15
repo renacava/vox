@@ -15,6 +15,11 @@
           (truncate (mod (/ index 64) 64))
           (truncate (mod (/ (/ index 64) 64) 64))))
 
+(defun vec3-to-index (vec3)
+  (+ (aref vec3 0)
+     (* (aref vec3 1) 64)
+     (* (aref vec3 2) 64 64)))
+
 (defun make-ivec2 (x y)
   (make-array 2 :element-type `(signed-byte 32) :initial-contents (vector x y)))
 
@@ -111,28 +116,30 @@
 ;;                                  (list (v! 0.5 -0.5 0.5) (v! 0.5 0.5)) ;;23
 ;;                                  ))
 
+(declaim (type fixnum *cube-n-verts*)
+         (type (simple-array fixnum) *cube-indices*))
 (defparameter *cube-n-verts* (length *cube-verts*))
 
-(defparameter *cube-indices* (list 2 1 0 3 2 0
-                                   6 5 4 7 6 4
-                                   9 10 8 10 11 8
-                                   15 14 12 13 15 12
-                                   18 17 16 19 18 16
-                                   22 21 20 21 23 20))
+(defparameter *cube-indices* (make-array 36 :element-type 'fixnum
+                                            :initial-contents (vector 2 1 0 3 2 0
+                                                                      6 5 4 7 6 4
+                                                                      9 10 8 10 11 8
+                                                                      15 14 12 13 15 12
+                                                                      18 17 16 19 18 16
+                                                                      22 21 20 21 23 20)
+                                         ))
 
-(defun offset-vert (vert x-offset y-offset z-offset)
-  (let ((index (aref vert 0))
-        (uv (aref vert 1))
-        (offset-index (xyz-to-index x-offset y-offset z-offset)))
-    ;;(vec2 (+ index offset-index) uv)
-    (list (vec2 (+ index offset-index) uv))
-    )
-  )
+(defun offset-vert (vert offset-index)
+  (declare (optimize (speed 3) (safety 0)))
+  (vec2 (+ (aref vert 0) offset-index) (aref vert 1)))
 
-(defun make-block-verts-and-indices (x-offset y-offset z-offset &optional (index-offset 0))
+(defun make-block-verts-and-indices (offset &optional (index-offset 0))
+  (declare (optimize (speed 3) (safety 3))
+           (type fixnum offset index-offset))
   (setf index-offset (* index-offset *cube-n-verts*))
-  (list (mapcar (lambda (vert) (offset-vert vert x-offset y-offset z-offset)) *cube-verts*)
-        (loop for index in *cube-indices*
+  (list (mapcar (lambda (vert) (offset-vert vert offset))
+                *cube-verts*)
+        (loop for index fixnum across *cube-indices*
                       collect (+ index index-offset))
         ))
 
@@ -140,16 +147,17 @@
   (let ((index-offset -1))
     (loop for offset in offsets
           when offset
-          collect (make-block-verts-and-indices (first offset) (second offset) (third offset) (incf index-offset))))
-  )
+          collect (make-block-verts-and-indices offset (incf index-offset)))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-vecs (mapcar #'first blocks-verts-and-indices))
          (index-lists (mapcar #'second blocks-verts-and-indices))
          (verts (loop for vert-list in vert-vecs append vert-list)))
-    ;;(setq my-stuff verts)
+    (setq my-stuff verts)
     
     (list ;;(apply #'concatenate 'vector vert-vecs)
      
-     (make-c-array (apply #'concatenate 'vector verts))
+     (make-c-array ;; (apply #'concatenate 'vector verts)
+      verts :element-type :vec2
+                   )
      (make-c-array (apply #'concatenate 'list index-lists) :element-type :uint))))
