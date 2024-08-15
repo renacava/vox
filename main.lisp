@@ -11,8 +11,10 @@
 (defmacro with-paused-rendering (&body body)
   `(let ((prior-state *rendering-paused?*))
      (setf *rendering-paused?* t)
-     ,@body
-     (setf *rendering-paused?* prior-state)))
+     (unwind-protect
+          (progn
+            ,@body)
+       (setf *rendering-paused?* prior-state))))
 
 (defun setup-lparallel-kernel (&optional (worker-threads 16))
   (unless lparallel:*kernel*
@@ -68,23 +70,23 @@
 
 (defun make-chunks (radius &optional (width 8))
   (setup-lparallel-kernel)
-  ;;(mapcar #'try-free *my-chunks*)
-  ;;(loop for chunk in *my-chunks* do (ignore-errors (try-free chunk)))
-  (setf *my-chunks* nil)
+  (setf chunks-queued-to-be-freed? t)
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
                                            append (loop for k below radius
                                                         collect (list j (truncate (- i)) (- k)))
                                            )))
-         (offset-groups (group chunk-offsets 16)))
+         (offset-groups (group chunk-offsets 6)))
     (bt:make-thread
      (lambda ()
        (loop for offset-group in offset-groups
-             do (lparallel:pmapcar (lambda (offset) (let ((mesh-data (make-chunk-mesh-data :width width)))
-                                                      (queue-chunk mesh-data offset width)))
-                                   offset-group))))
-    )
-  )
+             do (lparallel:pmapcar (lambda (offset) (labels ((queue ()
+                                                               (if (queue-full?)
+                                                                   (progn (sleep 0.0001)
+                                                                          (queue))
+                                                                   (queue-chunk (make-chunk-mesh-data :width width) offset width))))
+                                                      (queue)))
+                                   offset-group))))))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -104,8 +106,7 @@
                                         :magnify-filter :nearest))
   (setup-projection-matrix)
   
-  (make-chunks radius width)
-  )
+  (make-chunks radius width))
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
@@ -118,14 +119,14 @@
           do (when chunk
                (unless (buffer-stream chunk)
                  (when (and (vert-array chunk) (index-array chunk))
-                   (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk))))
-                 )
-               (map-g #'basic-pipeline (buffer-stream chunk)
-                      :now (now)
-                      :proj *projection-matrix*
-                      :offset (offset chunk)
-                      :chunk-width (width chunk)
-                      :atlas-sampler *texture-atlas-sampler*)))
+                   (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk)))))
+               (unless *rendering-paused?*
+                 (map-g #'basic-pipeline (buffer-stream chunk)
+                       :now (now)
+                       :proj *projection-matrix*
+                       :offset (offset chunk)
+                       :chunk-width (width chunk)
+                       :atlas-sampler *texture-atlas-sampler*))))
     
     (step-host)
     (swap)))
@@ -134,26 +135,44 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
+(defparameter chunk-queue-max-size 512)
 (defparameter half-baked-chunks nil)
+(defparameter chunks-queued-to-be-freed? nil)
+
+(defun queue-full? ()
+  (< chunk-queue-max-size (length queued-chunks)))
 
 (defun queue-chunk (mesh-data offset width)
   (push (list mesh-data offset width) queued-chunks))
 
+(defparameter errors nil)
+
 (defparameter inner-loader-thread-func (lambda ()
+                                         (if chunks-queued-to-be-freed?
+                                             (with-paused-rendering
+                                               (let ((freed-chunks 0)) 
+                                                (loop for chunk in *my-chunks* do (when (ignore-errors (try-free chunk) t) (incf freed-chunks)))
+                                                (setq n-freed-chunks (format nil "~a/~a" freed-chunks (length *my-chunks*)))
+                                                (setf *my-chunks* nil)
+                                                 (setf chunks-queued-to-be-freed? nil))))
                                          (if queued-chunks
                                              (let* ((queued-chunk (pop queued-chunks))
                                                     (mesh-data (first queued-chunk))
                                                     (offset (v! (second queued-chunk)))
                                                     (width (third queued-chunk))
-                                                    (chunk (ignore-errors
+                                                    (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
+                                                    (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
+                                                    (chunk (when (and vert-array index-array)
                                                             (make-instance 'chunk
                                                                            :width width
                                                                            :offset offset
-                                                                           :vert-array (make-gpu-array (first mesh-data))
-                                                                           :index-array (make-gpu-array (second mesh-data) :element-type :uint)
+                                                                           :vert-array vert-array
+                                                                           :index-array index-array
                                                                            :buffer-stream nil))))
                                                (try-free-objects (first mesh-data) (second mesh-data))
-                                               (push chunk *my-chunks*)
+                                               (if chunk
+                                                   (push chunk *my-chunks*)
+                                                   (try-free-objects vert-array index-array))
                                                (gl:finish))
                                              
                                              (sleep 0.001))))

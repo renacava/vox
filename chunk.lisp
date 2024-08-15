@@ -29,9 +29,11 @@
                    :buffer-stream (third mesh-data))))
 
 (defmethod free ((chunk chunk))
-  (try-free-objects (vert-array chunk)
-                    (index-array chunk)
-                    (buffer-stream chunk)))
+  (setq current-chunk chunk)
+  (try-free-objects
+   (buffer-stream chunk)
+   (index-array chunk)
+   (vert-array chunk)))
 
 (defun make-chunk-buffer-stream (&key (width 2) (height 2) (depth 2))
   "Returns a buffer-stream object for the mesh of a chunk of the given dimensions, made of cubes."
