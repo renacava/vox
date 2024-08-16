@@ -79,21 +79,24 @@
           uv
           id)))
 
-(defun make-block-verts-and-indices (offset &optional (index-offset 0))
+(defun make-block-verts-and-indices (offset &optional (index-offset 0) (block-id 0))
   (declare (optimize (speed 3) (safety 3))
            (type fixnum index-offset))
-  (setf index-offset (* index-offset *cube-n-verts*))
-  (list (mapcar (lambda (vert)
-                  (offset-vert vert offset))
-                *cube-verts*)
-        (loop for index fixnum across *cube-indices*
-                      collect (+ index index-offset))))
+  (let ((block-id (float block-id)))
+    (setf index-offset (* index-offset *cube-n-verts*))
+    (list (mapcar (lambda (vert)
+                    (offset-vert vert offset block-id))
+                  *cube-verts*)
+          (loop for index fixnum across *cube-indices*
+                collect (+ index index-offset)))))
 
-(defun make-blocks-verts-and-indices (offsets)
-  (let ((index-offset -1))
-    (loop for offset in offsets
-          when offset
-          collect (make-block-verts-and-indices offset (incf index-offset)))))
+
+(let ((flipflop nil))
+  (defun make-blocks-verts-and-indices (offsets)
+    (let ((index-offset -1))
+      (loop for offset in offsets
+            when offset
+            collect (make-block-verts-and-indices offset (incf index-offset) (random (truncate (square *texture-atlas-size*))))))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-vecs (mapcar #'first blocks-verts-and-indices))

@@ -49,7 +49,7 @@
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
-        (float (/ id atlas-size))))
+        (/ (float (/ id atlas-size)) atlas-size)))
 
 (defun-g vert-stage ((vert block-vert)
                      &uniform
@@ -67,7 +67,7 @@
          (id (int (block-vert-id vert)))
          (uv (+ uv (id-to-uv-offset id atlas-size))))
     (values (* proj pos)
-            (/ (block-vert-uv vert) 2))))
+            uv)))
 
 
 (defun-g frag-stage ((uv :vec2) &uniform (atlas-sampler :sampler-2d))
@@ -122,7 +122,7 @@
   (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                         :minify-filter :nearest-mipmap-nearest
                                         :magnify-filter :nearest))
-  (setup-projection-matrix)
+  ;;(setup-projection-matrix)
   
   (make-chunks radius width))
 
@@ -132,7 +132,7 @@
 (defun step-rendering ()
   (unless *rendering-paused?*
     (clear)
-
+    (setup-projection-matrix)
     (loop for chunk in *my-chunks*
           do (when chunk
                (unless (buffer-stream chunk)
