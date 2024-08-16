@@ -40,7 +40,7 @@
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices))
          (mesh-data (combine-blocks-verts-and-indices blocks-verts-and-indices))
-         (verts-gpu-array (make-gpu-array (first mesh-data)  :element-type :vec2))
+         (verts-gpu-array (make-gpu-array (first mesh-data)  :element-type 'block-vert))
          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
     (list verts-gpu-array
           indices-gpu-array
@@ -55,7 +55,7 @@
 
 (defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
   "Returns a buffer-stream object for a chunk based off of mesh-data."
-  (let* ((verts-gpu-array (make-gpu-array (first mesh-data)))
+  (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
     (list verts-gpu-array
           indices-gpu-array
@@ -68,13 +68,14 @@
                            append (loop for z below depth
                                         collect (make-array 3 :element-type 'fixnum  :initial-contents (vector x y z)))))
         collect (let ((result
-                        ;; (if (and (evenp (first indices))
-                        ;;          (evenp (second indices))
-                        ;;          (evenp (third indices)))
-                        ;;     indices
-                        ;;     nil)
-                        (indices-on-chunk-border-p indices width)))
-                  (when result (vec3-to-index result)))
+                        (if (and (evenp (aref indices 0))
+                                 (evenp (aref indices 1))
+                                 (evenp (aref indices 2)))
+                            indices
+                            nil)
+                        ;;(indices-on-chunk-border-p indices width)
+                        ))
+                  (when result result))
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)

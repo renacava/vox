@@ -26,6 +26,10 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
+(defstruct-g block-vert
+  (vert :vec3)
+  (uv :vec2))
+
 (defun-g index-to-xyz-g ((index :float))
   (vec3 (int (mod index 64))
         (int (mod (/ index 64) 64))
@@ -35,28 +39,32 @@
   (vec2 (int (mod index 64))
         (int (mod (/ index 64) 64))))
 
-(defun-g vert-stage ((vert :vec2)
+(defun-g ivec2-to-vec2 ((ivec2 :ivec2))
+  (vec2 (aref ivec2 0) (aref ivec2 1)))
+
+(defun-g ivec3-to-vec3 ((ivec3 :ivec3))
+  (vec3 (aref ivec3 0) (aref ivec3 1) (aref ivec3 2)))
+
+(defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
                      (chunk-width :int))
-  (let* ((pos (vec4 (index-to-xyz-g (aref vert 0)) 1))
+  (let* ((pos (vec4 (block-vert-vert vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (uv (index-to-xy-g (aref vert 1)))
-         (uv (/ uv 2))
-         (pos (+ pos (vec4 (- (* 50 (sin now)) 45) (- (* 12 (cos now)) -20) -100 0))))
+         (pos (+ pos (vec4 (- (* 50 (sin now)) 45) (- (* 12 (cos now)) -20) -20 0))))
     (values (* proj pos)
-            uv)))
+            (/ (block-vert-uv vert) 2))))
 
 
 (defun-g frag-stage ((uv :vec2) &uniform (atlas-sampler :sampler-2d))
   (texture atlas-sampler uv))
 
 (defpipeline-g basic-pipeline ()
-  (vert-stage :vec2)
+  (vert-stage block-vert)
   (frag-stage :vec2))
 
 (defun now ()
@@ -135,7 +143,7 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 512)
+(defparameter chunk-queue-max-size 256)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 
