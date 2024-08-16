@@ -69,18 +69,19 @@
                                                                       18 17 16 19 18 16
                                                                       22 21 20 21 23 20)))
 
-(defun offset-vert (vert offset-vec3)
+(defun offset-vert (vert offset-vec3 &optional (id 0.0))
   (declare (optimize (speed 3) (safety 1)))
   (let ((vert-vec3 (first vert))
         (uv (second vert)))
     (list (vec3 (+ (aref vert-vec3 0) (aref offset-vec3 0))
                 (+ (aref vert-vec3 1) (aref offset-vec3 1))
                 (+ (aref vert-vec3 2) (aref offset-vec3 2)))
-          uv)))
+          uv
+          id)))
 
 (defun make-block-verts-and-indices (offset &optional (index-offset 0))
   (declare (optimize (speed 3) (safety 3))
-           (type fixnum offset index-offset))
+           (type fixnum index-offset))
   (setf index-offset (* index-offset *cube-n-verts*))
   (list (mapcar (lambda (vert)
                   (offset-vert vert offset))

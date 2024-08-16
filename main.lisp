@@ -6,6 +6,7 @@
 (defparameter *my-chunks* nil)
 (defparameter *texture-atlas-tex* nil)
 (defparameter *texture-atlas-sampler* nil)
+(defparameter *texture-atlas-size* 2)
 (defparameter *rendering-paused?* nil)
 
 (defmacro with-paused-rendering (&body body)
@@ -28,7 +29,8 @@
 
 (defstruct-g block-vert
   (vert :vec3)
-  (uv :vec2))
+  (uv :vec2)
+  (id :float))
 
 (defun-g index-to-xyz-g ((index :float))
   (vec3 (int (mod index 64))
@@ -45,17 +47,25 @@
 (defun-g ivec3-to-vec3 ((ivec3 :ivec3))
   (vec3 (aref ivec3 0) (aref ivec3 1) (aref ivec3 2)))
 
+(defun-g id-to-uv-offset ((id :int) (atlas-size :int))
+  (vec2 (/ (float (mod id atlas-size)) atlas-size)
+        (float (/ id atlas-size))))
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
-                     (chunk-width :int))
+                     (chunk-width :int)
+                     (atlas-size :int))
   (let* ((pos (vec4 (block-vert-vert vert) 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (pos (+ pos (vec4 (- (* 50 (sin now)) 45) (- (* 12 (cos now)) -20) -20 0))))
+         (pos (+ pos (vec4 (- (* 50 (sin now)) 45) (- (* 12 (cos now)) -20) -20 0)))
+         (uv (/ (block-vert-uv vert) 2))
+         (id (int (block-vert-id vert)))
+         (uv (+ uv (id-to-uv-offset id atlas-size))))
     (values (* proj pos)
             (/ (block-vert-uv vert) 2))))
 
@@ -134,7 +144,8 @@
                        :proj *projection-matrix*
                        :offset (offset chunk)
                        :chunk-width (width chunk)
-                       :atlas-sampler *texture-atlas-sampler*))))
+                       :atlas-sampler *texture-atlas-sampler*
+                       :atlas-size *texture-atlas-size*))))
     
     (step-host)
     (swap)))
@@ -194,8 +205,6 @@
   (bt:make-thread (lambda ()
                     (with-cepl-context (loader-context ctx)
                       (loop (livesupport:continuable (funcall inner-loader-thread-func)))))))
-
-
 
 
 (defparameter main-loop-func (lambda ()
