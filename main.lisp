@@ -206,6 +206,8 @@
                     (with-cepl-context (loader-context ctx)
                       (loop (livesupport:continuable (funcall inner-loader-thread-func)))))))
 
+(defun get-cepl-context-surface-resolution ()
+  (surface-resolution (current-surface (cepl-context))))
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
@@ -215,6 +217,8 @@
                                        (livesupport:update-repl-link)
                                        (sleep 0.25))
                                      (let ((start-time (now)))
+                                       (setf (resolution (current-viewport))
+                                             (get-cepl-context-surface-resolution))
                                        (step-rendering)
                                        (step-host)
                                        (livesupport:update-repl-link)
