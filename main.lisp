@@ -30,7 +30,8 @@
 (defstruct-g block-vert
   (vert :vec3)
   (uv :vec2)
-  (id :float))
+  (id :float)
+  (local-offset :vec3))
 
 (defun-g index-to-xyz-g ((index :float))
   (vec3 (int (mod index 64))
@@ -58,14 +59,19 @@
                      (offset :vec3)
                      (chunk-width :int)
                      (atlas-size :int))
-  (let* ((pos (vec4 (block-vert-vert vert) 1))
+  (let* ((pos (block-vert-vert vert))
+         (pos (+ pos (block-vert-local-offset vert)))
+         (pos (vec4 pos 1))
          (offset (* offset chunk-width))
+         (offset (+ offset (* 0.2 (+ 1 (cos (* (* 112 (* 0.3 (block-vert-id vert))) now))))))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (pos (+ pos (vec4 (- (* 50 (sin now)) 45) (- (* 12 (cos now)) -20) -20 0)))
+         (pos (+ pos (vec4 (- (* 25 (sin now)) 25) (- (* 12 (cos now)) -10) -200;;(* -10 (+ 2 (sin now))) 0
+                           )))
          (uv (/ (block-vert-uv vert) 2))
          (id (int (block-vert-id vert)))
-         (uv (+ uv (id-to-uv-offset id atlas-size))))
+         (uv (+ uv (id-to-uv-offset id atlas-size)))
+         )
     (values (* proj pos)
             uv)))
 

@@ -26,35 +26,35 @@
 (defun make-ivec3 (x y z)
   (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
 
-(defparameter *cube-verts* (list (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;0.0   FRONT
-                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0))      ;;1.0
+(defparameter *cube-verts* (list (list (vec3 0.0 1.0 0.0) (vec2 0.0 1.0)) ;;0.0   FRONT
+                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 0.0))      ;;1.0
                                  (list (vec3 1.0 0.0 0.0)  (vec2 1.0 1.0))            ;;2
                                  (list (vec3 1.0 1.0 0.0)  (vec2 1.0 0.0)) ;;3
 
                                  (list (vec3 0.0 1.0 1.0) (vec2 0.0 0.0)) ;;4   BACK
-                                 (list (vec3 1.0 1.0 1.0) (vec2 0.0 1.0))       ;;5
+                                 (list (vec3 1.0 1.0 1.0) (vec2 1.0 0.0))       ;;5
                                  (list (vec3 1.0 0.0 1.0) (vec2 1.0 1.0)) ;;6
-                                 (list (vec3 0.0 0.0 1.0) (vec2 1.0 0.0))     ;;7
+                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 1.0))     ;;7
 
-                                 (list (vec3 0.0 1.0 0.0) (vec2 1.0 1.0)) ;;8   LEFT
-                                 (list (vec3 0.0 0.0 0.0) (vec2 1.0 0.0)) ;;9
-                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 0.0)) ;;1.00.0
-                                 (list (vec3 0.0 1.0 1.0) (vec2 0.0 1.0)) ;;1.01.0
+                                 (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;8   LEFT
+                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;9
+                                 (list (vec3 0.0 0.0 1.0) (vec2 1.0 1.0)) ;;1.00.0
+                                 (list (vec3 0.0 1.0 1.0) (vec2 1.0 0.0)) ;;1.01.0
 
-                                 (list (vec3 1.0 1.0 0.0) (vec2 0.0 1.0)) ;;1.02   RIGHT
+                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.02   RIGHT
                                  (list (vec3 1.0 1.0 1.0) (vec2 0.0 0.0)) ;;1.03
                                  (list (vec3 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;1.04
-                                 (list (vec3 1.0 0.0 1.0) (vec2 1.0 0.0)) ;;1.05
+                                 (list (vec3 1.0 0.0 1.0) (vec2 0.0 1.0)) ;;1.05
 
-                                 (list (vec3 0.0 1.0 1.0) (vec2 0.0 0.0)) ;;1.06  TOP
-                                 (list (vec3 0.0 1.0 0.0) (vec2 0.0 1.0)) ;;1.07
-                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 1.0)) ;;1.08
-                                 (list (vec3 1.0 1.0 1.0) (vec2 1.0 0.0)) ;;1.09
+                                 (list (vec3 0.0 1.0 1.0) (vec2 0.0 1.0)) ;;1.06  TOP
+                                 (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;1.07
+                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.08
+                                 (list (vec3 1.0 1.0 1.0) (vec2 1.0 1.0)) ;;1.09
 
-                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 1.0)) ;;20.0  BOTTOM
-                                 (list (vec3 1.0 0.0 0.0) (vec2 1.0 0.0)) ;;21.0
-                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 0.0)) ;;22
-                                 (list (vec3 1.0 0.0 1.0) (vec2 1.0 1.0)) ;;23
+                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 0.0)) ;;20.0  BOTTOM
+                                 (list (vec3 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;21.0
+                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;22
+                                 (list (vec3 1.0 0.0 1.0) (vec2 1.0 0.0)) ;;23
                                  ))
 
 (declaim (type fixnum *cube-n-verts*)
@@ -69,6 +69,8 @@
                                                                       18 17 16 19 18 16
                                                                       22 21 20 21 23 20)))
 
+;;(defun-g local-offset-vert ((vert :vec3) (offset :vec3)))
+
 (defun offset-vert (vert offset-vec3 &optional (id 0.0))
   (declare (optimize (speed 3) (safety 1)))
   (let ((vert-vec3 (first vert))
@@ -77,7 +79,8 @@
                 (+ (aref vert-vec3 1) (aref offset-vec3 1))
                 (+ (aref vert-vec3 2) (aref offset-vec3 2)))
           uv
-          id)))
+          id
+          )))
 
 (defun make-block-verts-and-indices (offset &optional (index-offset 0) (block-id 0))
   (declare (optimize (speed 3) (safety 3))
@@ -85,7 +88,9 @@
   (let ((block-id (float block-id)))
     (setf index-offset (* index-offset *cube-n-verts*))
     (list (mapcar (lambda (vert)
-                    (offset-vert vert offset block-id))
+                    (append vert (list block-id offset))
+                    ;;(offset-vert vert offset block-id)
+                    )
                   *cube-verts*)
           (loop for index fixnum across *cube-indices*
                 collect (+ index index-offset)))))

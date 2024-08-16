@@ -53,24 +53,25 @@
     (combine-blocks-verts-and-indices blocks-verts-and-indices)
     ))
 
-(defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
-  "Returns a buffer-stream object for a chunk based off of mesh-data."
-  (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
-         (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
-    (list verts-gpu-array
-          indices-gpu-array
-          (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
+;; (defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
+;;   "Returns a buffer-stream object for a chunk based off of mesh-data."
+;;   (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
+;;          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
+;;     (list verts-gpu-array
+;;           indices-gpu-array
+;;           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
   (loop for indices in
         (loop for x below width
               append (loop for y below height
                            append (loop for z below depth
-                                        collect (make-array 3 :element-type 'fixnum  :initial-contents (vector x y z)))))
+                                        collect (vec3 (float x) (float y) (float z)) ;; (make-array 3 :element-type 'float  :initial-contents (vector x y z))
+                                        )))
         collect (let ((result
-                        (if (and (evenp (aref indices 0))
-                                 (evenp (aref indices 1))
-                                 (evenp (aref indices 2)))
+                        (if (and (evenp (truncate (aref indices 0)))
+                                 (evenp (truncate (aref indices 1)))
+                                 (evenp (truncate (aref indices 2))))
                             indices
                             nil)
                         ;;(indices-on-chunk-border-p indices width)
@@ -82,7 +83,7 @@
   "Returns indices if on the border of the chunk, assuming cubic chunk, else nil."
   (declare (optimize (speed 3) (safety 0)))
   (declare (type fixnum chunk-width))
-  (declare (type (simple-array fixnum) indices))
+  ;;(declare (type (simple-array float) indices))
 
   (let ((x (aref indices 0))
         (y (aref indices 1))
