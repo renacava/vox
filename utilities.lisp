@@ -1,4 +1,4 @@
-;;(in-package :vox)
+>;;(in-package :vox)
 (in-package :vox)
 
 
@@ -1579,3 +1579,9 @@ It works because Common Lisp passes everything by value, not by reference, excep
 
 ;;(let ((pack (find-package :utilities)))
 ;;  (do-all-symbols (sym pack) (when (eql (symbol-package sym) pack) (export sym))))
+
+(defun ensure-number (value &optional (alternative 0))
+  (if (numberp value) value alternative))
+
+(defun ensure-float (value &optional (alternative 0.0))
+  (float (ensure-number value alternative)))

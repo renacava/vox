@@ -26,6 +26,7 @@
                (:file "utilities")
                (:file "cube")
                (:file "chunk")
+               (:file "meshes")
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"

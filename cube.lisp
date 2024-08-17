@@ -69,39 +69,27 @@
                                                                       18 17 16 19 18 16
                                                                       22 21 20 21 23 20)))
 
-;;(defun-g local-offset-vert ((vert :vec3) (offset :vec3)))
-
-(defun offset-vert (vert offset-vec3 &optional (id 0.0))
-  (declare (optimize (speed 3) (safety 1)))
-  (let ((vert-vec3 (first vert))
-        (uv (second vert)))
-    (list (vec3 (+ (aref vert-vec3 0) (aref offset-vec3 0))
-                (+ (aref vert-vec3 1) (aref offset-vec3 1))
-                (+ (aref vert-vec3 2) (aref offset-vec3 2)))
-          uv
-          id
-          )))
-
-(defun make-block-verts-and-indices (offset &optional (index-offset 0) (block-id 0))
+(defun make-block-verts-and-indices (offset &optional (index-offset 0) (block-symbol nil))
   (declare (optimize (speed 3) (safety 3))
            (type fixnum index-offset))
-  (let ((block-id (float block-id)))
-    (setf index-offset (* index-offset *cube-n-verts*))
+  (let ((mesh (get-mesh-bound-to-block-symbol block-symbol)))
+    (setf index-offset (* index-offset (getf mesh :n-verts)))
     (list (mapcar (lambda (vert)
-                    (append vert (list block-id offset))
-                    ;;(offset-vert vert offset block-id)
-                    )
-                  *cube-verts*)
-          (loop for index fixnum across *cube-indices*
+                    (append vert (list (getf mesh :atlas-column)
+                                       (getf mesh :atlas-row)
+                                       (vec3 (float (first offset))
+                                             (float (second offset))
+                                             (float (third offset))))))
+                  (getf mesh :verts))
+          (loop for index fixnum across (getf mesh :indices)
                 collect (+ index index-offset)))))
 
-
-(let ((flipflop nil))
-  (defun make-blocks-verts-and-indices (offsets)
-    (let ((index-offset -1))
-      (loop for offset in offsets
-            when offset
-            collect (make-block-verts-and-indices offset (incf index-offset) (random (truncate (square *texture-atlas-size*))))))))
+(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
+  (let ((index-offset -1))
+    (loop for pos-and-symb in positions-and-symbols
+          collect (make-block-verts-and-indices (subseq pos-and-symb 0 3)
+                                                (incf index-offset)
+                                                (last1 pos-and-symb)))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-vecs (mapcar #'first blocks-verts-and-indices))

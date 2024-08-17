@@ -1,5 +1,13 @@
 (in-package #:vox)
 
+(defparameter *chunk-width* 16)
+(defparameter *default-chunk* (loop for x below 8
+                                    append (loop for y below 8
+                                                 append (loop for z below 8
+                                                              when (> 1 (random 3))
+                                                              collect (list x y z (elt-random `(grass bricks cobblestone gobbledygook-nonsense)))))))
+
+
 (defclass chunk ()
   ((buffer-stream :initarg :buffer-stream
                   :accessor buffer-stream
@@ -17,74 +25,71 @@
           :accessor width
           :initform 2)))
 
-(defun make-chunk (&key (width 2) (offset (list 0 0 0)))
-  (let ((mesh-data (make-chunk-buffer-stream :width width :height width :depth width)))
-    (make-instance 'chunk
-                   :width width
-                   :offset (vec3 (float (first offset))
-                                 (float (second offset))
-                                 (float (third offset)))
-                   :vert-array (first mesh-data)
-                   :index-array (second mesh-data)
-                   :buffer-stream (third mesh-data))))
 
-(defmethod free ((chunk chunk))
-  (setq current-chunk chunk)
+(defmethod free ((chunk chunk))*
+  (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*)
   (try-free-objects
    (buffer-stream chunk)
    (index-array chunk)
    (vert-array chunk)))
 
-(defun make-chunk-buffer-stream (&key (width 2) (height 2) (depth 2))
-  "Returns a buffer-stream object for the mesh of a chunk of the given dimensions, made of cubes."
-  (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
-         (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices))
-         (mesh-data (combine-blocks-verts-and-indices blocks-verts-and-indices))
-         (verts-gpu-array (make-gpu-array (first mesh-data)  :element-type 'block-vert))
-         (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
-    (list verts-gpu-array
-          indices-gpu-array
-          (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
+(defun make-chunks (radius &optional (width *chunk-width*))
+  (setup-lparallel-kernel)
+  (setf chunks-queued-to-be-freed? t)
+  (let* ((chunk-offsets (loop for i below radius
+                              append (loop for j below radius
+                                           append (loop for k below radius
+                                                        collect (list j (truncate (- i)) (- k)))
+                                           )))
+         (offset-groups (group chunk-offsets 6)))
+    (bt:make-thread
+     (lambda ()
+       (loop for offset-group in offset-groups
+             do (lparallel:pmapcar (lambda (offset)
+                                     (make-chunk offset (list (list 0 0 0 'grass)
+                                                              (list 0 1 0 'cobblestone)
+                                                              (list 0 1 1 'bricks))
+                                                 width))
+                                   offset-group))))))
+
+(defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*))
+  "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
+  (labels ((queue ()
+             (if (queue-full?)
+                 (progn (sleep 0.0001)
+                        (queue))
+                 (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols width) chunk-offset width))))
+    (queue)))
+
+(defun make-chunk-mesh-from-data (block-positions-and-symbols &optional (width *chunk-width*))
+  "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
+  (let* ((blocks-verts-and-indices (make-blocks-verts-and-indices-from-positions-and-symbols block-positions-and-symbols)))
+    (combine-blocks-verts-and-indices blocks-verts-and-indices)))
 
 (defun make-chunk-mesh-data (&key (width 2) (height width) (depth width))
   "Returns the mesh-data for a chunk of the given dimensions."
   (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
          (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices)))
-    (combine-blocks-verts-and-indices blocks-verts-and-indices)
-    ))
-
-;; (defun make-chunk-buffer-stream-from-mesh-data (mesh-data)
-;;   "Returns a buffer-stream object for a chunk based off of mesh-data."
-;;   (let* ((verts-gpu-array (make-gpu-array (first mesh-data) :element-type 'block-vert))
-;;          (indices-gpu-array (make-gpu-array (second mesh-data) :element-type :uint)))
-;;     (list verts-gpu-array
-;;           indices-gpu-array
-;;           (make-buffer-stream verts-gpu-array :index-array indices-gpu-array))))
+    (combine-blocks-verts-and-indices blocks-verts-and-indices)))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))
   (loop for indices in
         (loop for x below width
               append (loop for y below height
                            append (loop for z below depth
-                                        collect (vec3 (float x) (float y) (float z)) ;; (make-array 3 :element-type 'float  :initial-contents (vector x y z))
-                                        )))
-        collect (let ((result
-                        (if (and (evenp (truncate (aref indices 0)))
-                                 (evenp (truncate (aref indices 1)))
-                                 (evenp (truncate (aref indices 2))))
-                            indices
-                            nil)
-                        ;;(indices-on-chunk-border-p indices width)
-                        ))
-                  (when result result))
+                                        collect (vec3 (float x) (float y) (float z)))))
+        collect (if (and (evenp (truncate (aref indices 0)))
+                         (evenp (truncate (aref indices 1)))
+                         (evenp (truncate (aref indices 2))))
+                    indices
+                    nil)
+        ;;(indices-on-chunk-border-p indices width)
         ))
 
 (defun indices-on-chunk-border-p (indices chunk-width)
   "Returns indices if on the border of the chunk, assuming cubic chunk, else nil."
   (declare (optimize (speed 3) (safety 0)))
   (declare (type fixnum chunk-width))
-  ;;(declare (type (simple-array float) indices))
-
   (let ((x (aref indices 0))
         (y (aref indices 1))
         (z (aref indices 2))

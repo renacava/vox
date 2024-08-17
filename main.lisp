@@ -1,9 +1,6 @@
 (in-package #:vox)
 
 (defparameter *projection-matrix* nil)
-(defparameter *my-chunk* nil)
-(defparameter *my-chunk2* nil)
-(defparameter *my-chunks* nil)
 (defparameter *texture-atlas-tex* nil)
 (defparameter *texture-atlas-sampler* nil)
 (defparameter *texture-atlas-size* 2)
@@ -30,7 +27,8 @@
 (defstruct-g block-vert
   (vert :vec3)
   (uv :vec2)
-  (id :float)
+  (texture-atlas-column :float)
+  (texture-atlas-row :float)
   (local-offset :vec3))
 
 (defun-g index-to-xyz-g ((index :float))
@@ -52,6 +50,10 @@
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
         (/ (float (/ id atlas-size)) atlas-size)))
 
+(defun-g atlas-column-row-to-uv-offset ((column :float) (row :float) (atlas-size :int))
+  (vec2 (/ column atlas-size)
+        (/ row atlas-size)))
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
@@ -63,15 +65,15 @@
          (pos (+ pos (block-vert-local-offset vert)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
-         (offset (+ offset (* 0.2 (+ 1 (cos (* (* 112 (* 0.3 (block-vert-id vert))) now))))))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (pos (+ pos (vec4 (- (* 25 (sin now)) 25) (- (* 12 (cos now)) -10) -200;;(* -10 (+ 2 (sin now))) 0
-                           )))
+         (now (* 6 now))
+         (pos (+ pos (vec4 (- (* 3 (sin now)) 2) (- (* 2 (cos now)) 3) -10)))
          (uv (/ (block-vert-uv vert) 2))
-         (id (int (block-vert-id vert)))
-         (uv (+ uv (id-to-uv-offset id atlas-size)))
-         )
+         (uv (+ uv (atlas-column-row-to-uv-offset
+                    (block-vert-texture-atlas-column vert)
+                    (block-vert-texture-atlas-row vert)
+                    atlas-size))))
     (values (* proj pos)
             uv)))
 
@@ -92,25 +94,7 @@
                        (* precise-time-units-per-second 100000))))
       60000000)))
 
-(defun make-chunks (radius &optional (width 8))
-  (setup-lparallel-kernel)
-  (setf chunks-queued-to-be-freed? t)
-  (let* ((chunk-offsets (loop for i below radius
-                              append (loop for j below radius
-                                           append (loop for k below radius
-                                                        collect (list j (truncate (- i)) (- k)))
-                                           )))
-         (offset-groups (group chunk-offsets 6)))
-    (bt:make-thread
-     (lambda ()
-       (loop for offset-group in offset-groups
-             do (lparallel:pmapcar (lambda (offset) (labels ((queue ()
-                                                               (if (queue-full?)
-                                                                   (progn (sleep 0.0001)
-                                                                          (queue))
-                                                                   (queue-chunk (make-chunk-mesh-data :width width) offset width))))
-                                                      (queue)))
-                                   offset-group))))))
+
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -119,7 +103,7 @@
                                                              10000f0
                                                              60f0)))
 
-(defun init (&optional (width 16) (radius 8))
+(defun init (&optional (width *chunk-width*) (radius 8))
   (setf (surface-title (current-surface)) "vox")
   (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
   (setf *texture-atlas-tex* (or 
@@ -128,7 +112,6 @@
   (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                         :minify-filter :nearest-mipmap-nearest
                                         :magnify-filter :nearest))
-  ;;(setup-projection-matrix)
   
   (make-chunks radius width))
 
@@ -139,19 +122,20 @@
   (unless *rendering-paused?*
     (clear)
     (setup-projection-matrix)
-    (loop for chunk in *my-chunks*
-          do (when chunk
-               (unless (buffer-stream chunk)
-                 (when (and (vert-array chunk) (index-array chunk))
-                   (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk)))))
-               (unless *rendering-paused?*
-                 (map-g #'basic-pipeline (buffer-stream chunk)
-                       :now (now)
-                       :proj *projection-matrix*
-                       :offset (offset chunk)
-                       :chunk-width (width chunk)
-                       :atlas-sampler *texture-atlas-sampler*
-                       :atlas-size *texture-atlas-size*))))
+    (maphash (lambda (offset chunk)
+               (when chunk
+                 (unless (buffer-stream chunk)
+                   (when (and (vert-array chunk) (index-array chunk))
+                     (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk)))))
+                 (unless *rendering-paused?*
+                   (map-g #'basic-pipeline (buffer-stream chunk)
+                          :now (now)
+                          :proj *projection-matrix*
+                          :offset (offset chunk)
+                          :chunk-width (width chunk)
+                          :atlas-sampler *texture-atlas-sampler*
+                          :atlas-size *texture-atlas-size*))))
+             *chunks-at-offsets-table*)
     
     (step-host)
     (swap)))
@@ -163,6 +147,7 @@
 (defparameter chunk-queue-max-size 256)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
+(defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
 
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))
@@ -175,11 +160,12 @@
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
-                                               (let ((freed-chunks 0)) 
-                                                (loop for chunk in *my-chunks* do (when (ignore-errors (try-free chunk) t) (incf freed-chunks)))
-                                                (setq n-freed-chunks (format nil "~a/~a" freed-chunks (length *my-chunks*)))
-                                                (setf *my-chunks* nil)
-                                                 (setf chunks-queued-to-be-freed? nil))))
+                                               (maphash (lambda (offset chunk)
+                                                          (ignore-errors (try-free chunk)))
+                                                        *chunks-at-offsets-table*)
+                                               (clrhash *chunks-at-offsets-table*)
+                                               (setf chunks-queued-to-be-freed? nil)))
+                                         
                                          (if queued-chunks
                                              (let* ((queued-chunk (pop queued-chunks))
                                                     (mesh-data (first queued-chunk))
@@ -196,7 +182,10 @@
                                                                            :buffer-stream nil))))
                                                (try-free-objects (first mesh-data) (second mesh-data))
                                                (if chunk
-                                                   (push chunk *my-chunks*)
+                                                   (let* ((offset (second queued-chunk))
+                                                          (existing-chunk (gethash offset *chunks-at-offsets-table*)))
+                                                     (when existing-chunk (try-free existing-chunk))
+                                                     (setf (gethash offset *chunks-at-offsets-table*) chunk))
                                                    (try-free-objects vert-array index-array))
                                                (gl:finish))
                                              
@@ -231,8 +220,7 @@
                                        (setf *delta* (- (now) start-time))
                                        (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
                                                                         1.0
-                                                                        *delta*))))))
-                                 )))
+                                                                        *delta*)))))))))
 
 (defun main ()
   (cepl:repl 720 480)
