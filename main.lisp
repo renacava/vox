@@ -67,8 +67,12 @@
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (now (* 6 now))
-         (pos (+ pos (vec4 (- (* 3 (sin now)) 2) (- (* 2 (cos now)) 3) -10)))
+         (now (* 0.5 now))
+         (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
+                           (- (* 35 (cos (* 2 now))) 33)
+                           (- -70
+                              (* 10 (+ 1 (sin (* 5 now))))
+                              ))))
          (uv (/ (block-vert-uv vert) 2))
          (uv (+ uv (atlas-column-row-to-uv-offset
                     (block-vert-texture-atlas-column vert)
@@ -229,3 +233,9 @@
   (loop (funcall main-loop-func)))
 
 
+(defun make-random-chunk-blocks (&optional (width *chunk-width*))
+  (loop for x below width
+        append (loop for y below width
+                     append (loop for z below width
+                                  when (> 1 (random 3))
+                                  collect (list x y z (elt-random `(grass bricks cobblestone)))))))
