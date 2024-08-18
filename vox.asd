@@ -27,6 +27,7 @@
                (:file "cube")
                (:file "chunk")
                (:file "meshes")
+               (:file "cull-hidden")
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"
