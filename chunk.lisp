@@ -1,10 +1,5 @@
 (in-package #:vox)
 
-(defparameter *chunk-width* 16)
-(defun set-chunk-width (&optional 16)
-  (setf *chunk-width* 16)
-  )
-
 (defparameter *nil-chunk-3D-array* (make-array (* *chunk-width* *chunk-width* *chunk-width*)))
 (defparameter *default-chunk* (loop for x below 8
                                     append (loop for y below 8

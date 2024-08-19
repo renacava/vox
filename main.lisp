@@ -38,22 +38,7 @@
   (uv :float)
   (texture-atlas-column :float)
   (texture-atlas-row :float)
-  (local-offset :vec3))
-
-;; (defun-g index-to-xyz-g ((index :float))
-;;   (vec3 (int (mod index 64))
-;;         (int (mod (/ index 64) 64))
-;;         (int (mod (/ (/ index 64) 64) 64))))
-
-;; (defun-g index-to-xy-g ((index :float))
-;;   (vec2 (int (mod index 64))
-;;         (int (mod (/ index 64) 64))))
-
-;; (defun-g ivec2-to-vec2 ((ivec2 :ivec2))
-;;   (vec2 (aref ivec2 0) (aref ivec2 1)))
-
-;; (defun-g ivec3-to-vec3 ((ivec3 :ivec3))
-;;   (vec3 (aref ivec3 0) (aref ivec3 1) (aref ivec3 2)))
+  (local-offset :float))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
@@ -83,7 +68,7 @@
                      (chunk-width :int)
                      (atlas-size :int))
   (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-width))
-         (pos (+ pos (block-vert-local-offset vert)))
+         (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-width)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))

@@ -1,5 +1,9 @@
 (in-package #:vox)
 
+(defparameter *chunk-width* 16)
+(defun set-chunk-width (&optional (width 16))
+  (setf *chunk-width* width))
+
 (defun coords-3d-to-1d (x y z &optional (cols *chunk-width*) (depth cols))
   "Transforms a 3d coordinate into a 1d one"
   (+ x (* y cols) (* z cols depth)))
@@ -85,9 +89,9 @@
     (list (mapcar (lambda (vert)
                     (append vert (list (getf mesh :atlas-column)
                                        (getf mesh :atlas-row)
-                                       (vec3 (float (first offset))
-                                             (float (second offset))
-                                             (float (third offset))))))
+                                       (3d-to-1d (float (first offset))
+                                                 (float (second offset))
+                                                 (float (third offset))))))
                   (getf mesh :verts))
           (loop for index fixnum across (getf mesh :indices)
                 collect (+ index index-offset)))))
@@ -106,6 +110,4 @@
          (indices (apply #'concatenate 'list index-lists))
          (vert-c-array  (make-c-array verts :element-type 'block-vert))
          (index-c-array (make-c-array indices :element-type :uint)))
-    (push vert-c-array my-vert-arrays)
-    (push index-c-array my-index-arrays)
     (list vert-c-array index-c-array)))
