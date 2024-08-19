@@ -14,7 +14,7 @@
             ,@body)
        (setf *rendering-paused?* prior-state))))
 
-(defun setup-lparallel-kernel (&optional (worker-threads 3))
+(defun setup-lparallel-kernel (&optional (worker-threads 6))
   (unless lparallel:*kernel*
     (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
@@ -26,27 +26,34 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
+;; (defstruct-g block-vert
+;;   (vert :vec3)
+;;   (uv :vec2)
+;;   (texture-atlas-column :float)
+;;   (texture-atlas-row :float)
+;;   (local-offset :vec3))
+
 (defstruct-g block-vert
-  (vert :vec3)
+  (vert :float)
   (uv :vec2)
   (texture-atlas-column :float)
   (texture-atlas-row :float)
   (local-offset :vec3))
 
-(defun-g index-to-xyz-g ((index :float))
-  (vec3 (int (mod index 64))
-        (int (mod (/ index 64) 64))
-        (int (mod (/ (/ index 64) 64) 64))))
+;; (defun-g index-to-xyz-g ((index :float))
+;;   (vec3 (int (mod index 64))
+;;         (int (mod (/ index 64) 64))
+;;         (int (mod (/ (/ index 64) 64) 64))))
 
-(defun-g index-to-xy-g ((index :float))
-  (vec2 (int (mod index 64))
-        (int (mod (/ index 64) 64))))
+;; (defun-g index-to-xy-g ((index :float))
+;;   (vec2 (int (mod index 64))
+;;         (int (mod (/ index 64) 64))))
 
-(defun-g ivec2-to-vec2 ((ivec2 :ivec2))
-  (vec2 (aref ivec2 0) (aref ivec2 1)))
+;; (defun-g ivec2-to-vec2 ((ivec2 :ivec2))
+;;   (vec2 (aref ivec2 0) (aref ivec2 1)))
 
-(defun-g ivec3-to-vec3 ((ivec3 :ivec3))
-  (vec3 (aref ivec3 0) (aref ivec3 1) (aref ivec3 2)))
+;; (defun-g ivec3-to-vec3 ((ivec3 :ivec3))
+;;   (vec3 (aref ivec3 0) (aref ivec3 1) (aref ivec3 2)))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
@@ -56,6 +63,13 @@
   (vec2 (/ column atlas-size)
         (/ row atlas-size)))
 
+(defun-g 1d-to-3d ((index :float) (cols :float) (depth :float))
+  (let* ((z (int (/ index (* cols depth))))
+         (index (- index (* z cols depth)))
+         (x (mod index cols))
+         (y (int (/ index cols))))
+    (vec3 x y z)))
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
@@ -63,7 +77,7 @@
                      (offset :vec3)
                      (chunk-width :int)
                      (atlas-size :int))
-  (let* ((pos (block-vert-vert vert))
+  (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-width))
          (pos (+ pos (block-vert-local-offset vert)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
@@ -155,7 +169,7 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 256)
+(defparameter chunk-queue-max-size 512)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
@@ -169,7 +183,6 @@
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
-                                               
                                                (maphash (lambda (offset chunk)
                                                           (try-free chunk))
                                                         *chunks-at-offsets-table*)
@@ -207,7 +220,7 @@
                                      (progn
                                        (step-host)
                                        (livesupport:update-repl-link)
-                                       (sleep 0.25))
+                                       (sleep 0.01))
                                      (let ((start-time (now)))
                                        (setf (resolution (current-viewport))
                                              (get-cepl-context-surface-resolution))

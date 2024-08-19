@@ -1,6 +1,11 @@
 (in-package #:vox)
 
 (defparameter *chunk-width* 16)
+(defun set-chunk-width (&optional 16)
+  (setf *chunk-width* 16)
+  )
+
+(defparameter *nil-chunk-3D-array* (make-array (* *chunk-width* *chunk-width* *chunk-width*)))
 (defparameter *default-chunk* (loop for x below 8
                                     append (loop for y below 8
                                                  append (loop for z below 8
@@ -66,12 +71,6 @@
 (defun make-chunk-mesh-from-data (block-positions-and-symbols &optional (width *chunk-width*))
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
   (let* ((blocks-verts-and-indices (make-blocks-verts-and-indices-from-positions-and-symbols block-positions-and-symbols)))
-    (combine-blocks-verts-and-indices blocks-verts-and-indices)))
-
-(defun make-chunk-mesh-data (&key (width 2) (height width) (depth width))
-  "Returns the mesh-data for a chunk of the given dimensions."
-  (let* ((block-indices (make-chunk-block-indices :width width :height height :depth depth))
-         (blocks-verts-and-indices (make-blocks-verts-and-indices block-indices)))
     (combine-blocks-verts-and-indices blocks-verts-and-indices)))
 
 (defun make-chunk-block-indices (&key (width 2) (height 2) (depth 2))

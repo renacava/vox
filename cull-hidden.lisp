@@ -1,5 +1,7 @@
 (in-package #:vox)
 
+
+
 (defun cull-hidden-blocks-from-positions-and-symbols (positions-and-symbols)
   (let ((solid-p-table (get-solid-p-table-from-positions-and-symbols positions-and-symbols))
         (nil-chunk (loop for x below *chunk-width*

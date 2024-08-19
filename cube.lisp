@@ -1,24 +1,32 @@
 (in-package #:vox)
 
-(defun xy-to-index (x y)
-  (+ x (* y 64)))
+(defun coords-3d-to-1d (x y z &optional (cols *chunk-width*) (depth cols))
+  "Transforms a 3d coordinate into a 1d one"
+  (+ x (* y cols) (* z cols depth)))
 
-(defun index-to-xy (index)
-  (vector (truncate (mod index 64))
-          (truncate (mod (/ index 64) 64))))
+(defun coords-1d-to-3d (n &optional (cols *chunk-width*) (depth cols))
+  "Transforms a 1d coordinate into a 3d one"
+  (list (mod n cols)
+        (mod (truncate (/ n cols)) (* cols depth))
+        (truncate (/ n (* cols depth)))))
 
-(defun xyz-to-index (x y z)
-  (+ x (* y 64) (* z 64 64)))
+(defun 3d-to-1d (x y z &optional (cols *chunk-width*) (depth cols))
+  (+ x (* y cols) (* z cols depth)))
 
-(defun index-to-xyz (index)
-  (vector (truncate (mod index 64))
-          (truncate (mod (/ index 64) 64))
-          (truncate (mod (/ (/ index 64) 64) 64))))
+(defun 1d-to-3d (index &optional (cols *chunk-width*) (depth cols))
+  (let* ((z (truncate (/ index (* cols depth))))
+         (index (- index (* z cols depth)))
+         (x (mod index cols))
+         (y (truncate (/ index cols))))
+    (list x y z)))
 
-(defun vec3-to-index (vec3)
-  (+ (aref vec3 0)
-     (* (aref vec3 1) 64)
-     (* (aref vec3 2) 64 64)))
+(defun 2d-to-1d (x y &optional (cols *chunk-width*))
+  (+ x (* y cols)))
+
+(defun 1d-to-2d (index &optional (cols *chunk-width*))
+  (let* ((x (mod index cols))
+         (y (truncate (/ index cols))))
+    (list x y)))
 
 (defun make-ivec2 (x y)
   (make-array 2 :element-type `(signed-byte 32) :initial-contents (vector x y)))
@@ -26,35 +34,35 @@
 (defun make-ivec3 (x y z)
   (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
 
-(defparameter *cube-verts* (list (list (vec3 0.0 1.0 0.0) (vec2 0.0 1.0)) ;;0.0   FRONT
-                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 0.0))      ;;1.0
-                                 (list (vec3 1.0 0.0 0.0)  (vec2 1.0 1.0))            ;;2
-                                 (list (vec3 1.0 1.0 0.0)  (vec2 1.0 0.0)) ;;3
+(defparameter *cube-verts* (list (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 1.0)) ;;0.0   FRONT
+                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 0.0))      ;;1.0
+                                 (list (3d-to-1d 1.0 0.0 0.0)  (vec2 1.0 1.0))            ;;2
+                                 (list (3d-to-1d 1.0 1.0 0.0)  (vec2 1.0 0.0)) ;;3
 
-                                 (list (vec3 0.0 1.0 1.0) (vec2 0.0 0.0)) ;;4   BACK
-                                 (list (vec3 1.0 1.0 1.0) (vec2 1.0 0.0))       ;;5
-                                 (list (vec3 1.0 0.0 1.0) (vec2 1.0 1.0)) ;;6
-                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 1.0))     ;;7
+                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 0.0 0.0)) ;;4   BACK
+                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 1.0 0.0))       ;;5
+                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 1.0 1.0)) ;;6
+                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 0.0 1.0))     ;;7
 
-                                 (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;8   LEFT
-                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;9
-                                 (list (vec3 0.0 0.0 1.0) (vec2 1.0 1.0)) ;;1.00.0
-                                 (list (vec3 0.0 1.0 1.0) (vec2 1.0 0.0)) ;;1.01.0
+                                 (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;8   LEFT
+                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;9
+                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 1.0 1.0)) ;;1.00.0
+                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 1.0 0.0)) ;;1.01.0
 
-                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.02   RIGHT
-                                 (list (vec3 1.0 1.0 1.0) (vec2 0.0 0.0)) ;;1.03
-                                 (list (vec3 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;1.04
-                                 (list (vec3 1.0 0.0 1.0) (vec2 0.0 1.0)) ;;1.05
+                                 (list (3d-to-1d 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.02   RIGHT
+                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 0.0 0.0)) ;;1.03
+                                 (list (3d-to-1d 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;1.04
+                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 0.0 1.0)) ;;1.05
 
-                                 (list (vec3 0.0 1.0 1.0) (vec2 0.0 1.0)) ;;1.06  TOP
-                                 (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;1.07
-                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.08
-                                 (list (vec3 1.0 1.0 1.0) (vec2 1.0 1.0)) ;;1.09
+                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 0.0 1.0)) ;;1.06  TOP
+                                 (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;1.07
+                                 (list (3d-to-1d 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.08
+                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 1.0 1.0)) ;;1.09
 
-                                 (list (vec3 0.0 0.0 1.0) (vec2 0.0 0.0)) ;;20.0  BOTTOM
-                                 (list (vec3 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;21.0
-                                 (list (vec3 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;22
-                                 (list (vec3 1.0 0.0 1.0) (vec2 1.0 0.0)) ;;23
+                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 0.0 0.0)) ;;20.0  BOTTOM
+                                 (list (3d-to-1d 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;21.0
+                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;22
+                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 1.0 0.0)) ;;23
                                  ))
 
 (declaim (type fixnum *cube-n-verts*)
@@ -90,9 +98,6 @@
           collect (make-block-verts-and-indices (subseq pos-and-symb 0 3)
                                                 (incf index-offset)
                                                 (last1 pos-and-symb)))))
-
-(defparameter my-index-arrays nil)
-(defparameter my-vert-arrays nil)
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-vecs (mapcar #'first blocks-verts-and-indices))
