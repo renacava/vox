@@ -34,35 +34,35 @@
 (defun make-ivec3 (x y z)
   (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
 
-(defparameter *cube-verts* (list (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 1.0)) ;;0.0   FRONT
-                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 0.0))      ;;1.0
-                                 (list (3d-to-1d 1.0 0.0 0.0)  (vec2 1.0 1.0))            ;;2
-                                 (list (3d-to-1d 1.0 1.0 0.0)  (vec2 1.0 0.0)) ;;3
+(defparameter *cube-verts* (list (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0)) ;;0.0   FRONT
+                                 (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 0.0))      ;;1.0
+                                 (list (3d-to-1d 1.0 0.0 0.0)  (2d-to-1d 1.0 1.0))            ;;2
+                                 (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0)) ;;3
 
-                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 0.0 0.0)) ;;4   BACK
-                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 1.0 0.0))       ;;5
-                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 1.0 1.0)) ;;6
-                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 0.0 1.0))     ;;7
+                                 (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0)) ;;4   BACK
+                                 (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0))       ;;5
+                                 (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0)) ;;6
+                                 (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0))     ;;7
 
-                                 (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;8   LEFT
-                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;9
-                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 1.0 1.0)) ;;1.00.0
-                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 1.0 0.0)) ;;1.01.0
+                                 (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0)) ;;8   LEFT
+                                 (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0)) ;;9
+                                 (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0)) ;;1.00.0
+                                 (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0)) ;;1.01.0
 
-                                 (list (3d-to-1d 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.02   RIGHT
-                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 0.0 0.0)) ;;1.03
-                                 (list (3d-to-1d 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;1.04
-                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 0.0 1.0)) ;;1.05
+                                 (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0)) ;;1.02   RIGHT
+                                 (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0)) ;;1.03
+                                 (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0)) ;;1.04
+                                 (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0)) ;;1.05
 
-                                 (list (3d-to-1d 0.0 1.0 1.0) (vec2 0.0 1.0)) ;;1.06  TOP
-                                 (list (3d-to-1d 0.0 1.0 0.0) (vec2 0.0 0.0)) ;;1.07
-                                 (list (3d-to-1d 1.0 1.0 0.0) (vec2 1.0 0.0)) ;;1.08
-                                 (list (3d-to-1d 1.0 1.0 1.0) (vec2 1.0 1.0)) ;;1.09
+                                 (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0)) ;;1.06  TOP
+                                 (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0)) ;;1.07
+                                 (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0)) ;;1.08
+                                 (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0)) ;;1.09
 
-                                 (list (3d-to-1d 0.0 0.0 1.0) (vec2 0.0 0.0)) ;;20.0  BOTTOM
-                                 (list (3d-to-1d 1.0 0.0 0.0) (vec2 1.0 1.0)) ;;21.0
-                                 (list (3d-to-1d 0.0 0.0 0.0) (vec2 0.0 1.0)) ;;22
-                                 (list (3d-to-1d 1.0 0.0 1.0) (vec2 1.0 0.0)) ;;23
+                                 (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0)) ;;20.0  BOTTOM
+                                 (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0)) ;;21.0
+                                 (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0)) ;;22
+                                 (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0)) ;;23
                                  ))
 
 (declaim (type fixnum *cube-n-verts*)

@@ -35,7 +35,7 @@
 
 (defstruct-g block-vert
   (vert :float)
-  (uv :vec2)
+  (uv :float)
   (texture-atlas-column :float)
   (texture-atlas-row :float)
   (local-offset :vec3))
@@ -70,6 +70,11 @@
          (y (int (/ index cols))))
     (vec3 x y z)))
 
+(defun-g 1d-to-2d ((index :float) (cols :float))
+  (let* ((x (mod index cols))
+         (y (int (/ index cols))))
+    (vec2 x y)))
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
@@ -88,7 +93,7 @@
                            (- (* 35 (cos (* 2 now))) 33)
                            (- -70
                               (* 10 (+ 1 (sin (* 5 now))))))))
-         (uv (/ (block-vert-uv vert) 2))
+         (uv (/ (1d-to-2d (block-vert-uv vert) chunk-width) 2))
          (uv (+ uv (atlas-column-row-to-uv-offset
                     (block-vert-texture-atlas-column vert)
                     (block-vert-texture-atlas-row vert)
