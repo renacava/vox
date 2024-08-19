@@ -26,19 +26,10 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
-;; (defstruct-g block-vert
-;;   (vert :vec3)
-;;   (uv :vec2)
-;;   (texture-atlas-column :float)
-;;   (texture-atlas-row :float)
-;;   (local-offset :vec3))
-
 (defstruct-g block-vert
   (vert :float)
   (uv :float)
   (texture-atlas-index :float)
-  ;;(texture-atlas-column :float)
-  ;;3(texture-atlas-row :float)
   (local-offset :float))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))

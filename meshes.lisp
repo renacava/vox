@@ -23,17 +23,18 @@
 (defun bind-block-symbol-to-mesh (block-symbol mesh-verts mesh-indices texture-atlas-column texture-atlas-row &optional (solid-p t))
   "Mesh should be a list of lists, where each sublist contains a list of sublists each each sublist contains a vec3 for vertices, and a vec2 for uv's."
   (setf (gethash block-symbol *symbol-mesh-table*)
-        (make-block-mesh mesh-verts mesh-indices texture-atlas-column texture-atlas-row solid-p)))
+        (make-block-mesh mesh-verts mesh-indices texture-atlas-column texture-atlas-row block-symbol solid-p)))
 
-(defun make-block-mesh (mesh-verts mesh-indices texture-atlas-column texture-atlas-row &optional (solid-p t))
+(defun make-block-mesh (mesh-verts mesh-indices texture-atlas-column texture-atlas-row block-symbol &optional (solid-p t))
   (let (n-verts)
     (unless mesh-verts
       (setf mesh-verts *cube-verts*
             mesh-indices *cube-indices*
             n-verts *cube-n-verts*
             texture-atlas-column (or texture-atlas-column 1.0)
-            texture-atlas-row (or texture-atlas-row 1.0)))
-
+            texture-atlas-row (or texture-atlas-row 1.0)
+            solid-p (resolve solid-p)))
+    (setf (gethash block-symbol *block-solidity-table*) solid-p)
     (make-instance 'block-mesh
                    :verts mesh-verts
                    :indices mesh-indices
@@ -52,6 +53,11 @@
           :atlas-column (atlas-column block-mesh)
           :atlas-row (atlas-row block-mesh)
           :solid-p (solid-p block-mesh))))
+
+(defparameter *block-solidity-table* (make-hash-table))
+
+(defun get-symbol-mesh-solid-p (block-symbol)
+  (gethash block-symbol *block-solidity-table*))
 
 (progn
   (defparameter *symbol-mesh-table* (make-hash-table))
