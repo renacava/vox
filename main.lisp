@@ -36,8 +36,9 @@
 (defstruct-g block-vert
   (vert :float)
   (uv :float)
-  (texture-atlas-column :float)
-  (texture-atlas-row :float)
+  (texture-atlas-index :float)
+  ;;(texture-atlas-column :float)
+  ;;3(texture-atlas-row :float)
   (local-offset :float))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))
@@ -78,10 +79,11 @@
                            (- (* 35 (cos (* 2 now))) 33)
                            (- -70
                               (* 10 (+ 1 (sin (* 5 now))))))))
+         (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
          (uv (/ (1d-to-2d (block-vert-uv vert) chunk-width) 2))
          (uv (+ uv (atlas-column-row-to-uv-offset
-                    (block-vert-texture-atlas-column vert)
-                    (block-vert-texture-atlas-row vert)
+                    (aref atlas-coords 0)
+                    (aref atlas-coords 1)
                     atlas-size))))
     (values (* proj pos)
             uv)))

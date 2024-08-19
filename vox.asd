@@ -25,6 +25,7 @@
   :components ((:file "package")
                (:file "utilities")
                (:file "cube")
+               (:file "cube-faces")
                (:file "chunk")
                (:file "meshes")
                (:file "cull-hidden")
