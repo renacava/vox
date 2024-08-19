@@ -14,12 +14,14 @@
             ,@body)
        (setf *rendering-paused?* prior-state))))
 
-(defun setup-lparallel-kernel (&optional (worker-threads 16))
+(defun setup-lparallel-kernel (&optional (worker-threads 3))
   (unless lparallel:*kernel*
     (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
 (defun try-free (object)
-  (when object (free object)))
+  (when object (free object)
+        (return-from try-free nil))
+  object)
 
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
@@ -67,12 +69,11 @@
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (now (* 0.5 now))
+         (now (* 5.5 now))
          (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
                            (- (* 35 (cos (* 2 now))) 33)
                            (- -70
-                              (* 10 (+ 1 (sin (* 5 now))))
-                              ))))
+                              (* 10 (+ 1 (sin (* 5 now))))))))
          (uv (/ (block-vert-uv vert) 2))
          (uv (+ uv (atlas-column-row-to-uv-offset
                     (block-vert-texture-atlas-column vert)
@@ -109,36 +110,42 @@
 
 (defun init (&optional (width *chunk-width*) (radius 8))
   (setf (surface-title (current-surface)) "vox")
-  (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)
+  (with-paused-rendering
+    (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*))
   (setf *texture-atlas-tex* (or 
                              (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
                              (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
   (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                         :minify-filter :nearest-mipmap-nearest
                                         :magnify-filter :nearest))
-  
   (make-chunks radius width))
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)
+
+(defparameter my-buffers nil)
 
 (defun step-rendering ()
   (unless *rendering-paused?*
     (clear)
     (setup-projection-matrix)
     (maphash (lambda (offset chunk)
-               (when chunk
-                 (unless (buffer-stream chunk)
+               (when (eq 'chunk (type-of chunk))
+                 (unless (ignore-errors (buffer-stream chunk))
                    (when (and (vert-array chunk) (index-array chunk))
-                     (setf (buffer-stream chunk) (make-buffer-stream (vert-array chunk) :index-array (index-array chunk)))))
+                     (setf (buffer-stream chunk) (make-buffer-stream
+                                                  (vert-array chunk)
+                                                  :index-array (index-array chunk)
+                                                  :retain-arrays nil))))
                  (unless *rendering-paused?*
-                   (map-g #'basic-pipeline (buffer-stream chunk)
-                          :now (now)
-                          :proj *projection-matrix*
-                          :offset (offset chunk)
-                          :chunk-width (width chunk)
-                          :atlas-sampler *texture-atlas-sampler*
-                          :atlas-size *texture-atlas-size*))))
+                   (when (< 0 (buffer-stream-length (buffer-stream chunk)))
+                     (map-g #'basic-pipeline (buffer-stream chunk)
+                            :now (now)
+                            :proj *projection-matrix*
+                            :offset (offset chunk)
+                            :chunk-width (width chunk)
+                            :atlas-sampler *texture-atlas-sampler*
+                            :atlas-size *texture-atlas-size*)))))
              *chunks-at-offsets-table*)
     
     (step-host)
@@ -159,51 +166,37 @@
 (defun queue-chunk (mesh-data offset width)
   (push (list mesh-data offset width) queued-chunks))
 
-(defparameter errors nil)
-
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
+                                               
                                                (maphash (lambda (offset chunk)
-                                                          (ignore-errors (try-free chunk)))
+                                                          (try-free chunk))
                                                         *chunks-at-offsets-table*)
                                                (clrhash *chunks-at-offsets-table*)
                                                (setf chunks-queued-to-be-freed? nil)))
                                          
-                                         (if queued-chunks
-                                             (let* ((queued-chunk (pop queued-chunks))
-                                                    (mesh-data (first queued-chunk))
-                                                    (offset (v! (second queued-chunk)))
-                                                    (width (third queued-chunk))
-                                                    (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
-                                                    (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
-                                                    (chunk (when (and vert-array index-array)
-                                                            (make-instance 'chunk
-                                                                           :width width
-                                                                           :offset offset
-                                                                           :vert-array vert-array
-                                                                           :index-array index-array
-                                                                           :buffer-stream nil))))
-                                               (try-free-objects (first mesh-data) (second mesh-data))
-                                               (if chunk
-                                                   (let* ((offset (second queued-chunk))
-                                                          (existing-chunk (gethash offset *chunks-at-offsets-table*)))
-                                                     (when existing-chunk (try-free existing-chunk))
-                                                     (setf (gethash offset *chunks-at-offsets-table*) chunk))
-                                                   (try-free-objects vert-array index-array))
-                                               (gl:finish))
-                                             
-                                             (sleep 0.001))))
-
-(defun init-ctx ()
-  (setf ctx (or ctx (cepl.context:make-context-shared-with-current-context))))
-
-(defun make-loader-thread ()
-  (init-ctx)
-  
-  (bt:make-thread (lambda ()
-                    (with-cepl-context (loader-context ctx)
-                      (loop (livesupport:continuable (funcall inner-loader-thread-func)))))))
+                                         (when queued-chunks
+                                           (let* ((queued-chunk (pop queued-chunks))
+                                                  (mesh-data (first queued-chunk))
+                                                  (offset (v! (second queued-chunk)))
+                                                  (width (third queued-chunk))
+                                                  (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
+                                                  (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
+                                                  (chunk (when (and vert-array index-array)
+                                                           (make-instance 'chunk
+                                                                          :width width
+                                                                          :offset offset
+                                                                          :vert-array vert-array
+                                                                          :index-array index-array
+                                                                          :buffer-stream nil))))
+                                             (try-free-objects (first mesh-data) (second mesh-data))
+                                             (if chunk
+                                                 (let* ((offset (second queued-chunk))
+                                                        (existing-chunk (gethash offset *chunks-at-offsets-table*)))
+                                                   (when existing-chunk (try-free existing-chunk))
+                                                   (setf (gethash offset *chunks-at-offsets-table*) chunk))
+                                                 (try-free-objects vert-array index-array))))))
 
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
@@ -224,12 +217,12 @@
                                        (setf *delta* (- (now) start-time))
                                        (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
                                                                         1.0
-                                                                        *delta*)))))))))
+                                                                        *delta*))))))
+                                 (funcall inner-loader-thread-func))))
 
 (defun main ()
   (cepl:repl 720 480)
   (init)
-  (make-loader-thread)
   (loop (funcall main-loop-func)))
 
 

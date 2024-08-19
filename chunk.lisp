@@ -28,10 +28,11 @@
 
 (defmethod free ((chunk chunk))*
   (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*)
-  (try-free-objects
-   (buffer-stream chunk)
-   (index-array chunk)
-   (vert-array chunk)))
+  (let* ((vert-array (vert-array chunk))
+         (index-array (index-array chunk))
+         (buffer-stream (buffer-stream chunk)))
+    (try-free-objects buffer-stream index-array vert-array)
+    (setf chunk nil)))
 
 (defun make-chunks (radius &optional (width *chunk-width*))
   (setup-lparallel-kernel)
@@ -39,7 +40,7 @@
   (let* ((chunk-offsets (loop for i below radius
                               append (loop for j below radius
                                            append (loop for k below radius
-                                                        collect (list j (truncate i) k))
+                                                        collect (list j (truncate i) (- k)))
                                            )))
          (offset-groups (group chunk-offsets 6)))
     (bt:make-thread
@@ -47,7 +48,7 @@
        (loop for offset-group in offset-groups
              do (lparallel:pmapcar (lambda (offset)
                                      (make-chunk offset ;; (list (list 0 0 0 'grass)
-                                                        ;;       (list 0 1 0 'cobblestone)
+                                                 ;;       (list 0 1 0 'cobblestone)
                                                  ;;       (list 0 1 1 'bricks))
                                                  (make-random-chunk-blocks)
                                                  width))
