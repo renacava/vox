@@ -4,9 +4,12 @@
   (loop for x below width
         append (loop for z below width
                      append (loop for y below height
-                                  when (> 1 (random 3))
+                                  ;;when (> 1 (random 3))
                                   collect (list x y z
-                                                (if (< y 100) 'cobblestone 'grass))))))
+                                                (cond ((< y 4) 'bricks)
+                                                      ((< y 16) 'cobblestone)
+                                                      ((< y 20) 'grass)
+                                                      (t nil)))))))
 
 (defclass chunk ()
   ((buffer-stream :initarg :buffer-stream
@@ -28,7 +31,7 @@
            :accessor height
            :initform *chunk-height*)))
 
-(defmethod free ((chunk chunk))*
+(defmethod free ((chunk chunk))
   (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*)
   (let* ((vert-array (vert-array chunk))
          (index-array (index-array chunk))
@@ -67,4 +70,6 @@
 
 (defun make-chunk-mesh-from-data (block-positions-and-symbols)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
-  (combine-blocks-verts-and-indices (make-blocks-verts-and-indices-from-positions-and-symbols block-positions-and-symbols)))
+  (combine-blocks-verts-and-indices
+   (make-blocks-verts-and-indices-from-positions-and-symbols
+    (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols))))

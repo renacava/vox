@@ -31,8 +31,6 @@
                                                                   (when (not (solid-ahead-p pos chunk-block-array)) 'front)
                                                                   (when (not (solid-behind-p pos chunk-block-array)) 'back))))))
 
-(declaim (inline pos-above pos-below pos-ahead pos-behind pos-left pos-right))
-
 (defun pos-above (pos)
   (vector (aref pos 0)
           (1+ (aref pos 1))
