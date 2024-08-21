@@ -1,23 +1,5 @@
 (in-package #:vox)
 
-;; (defparameter *empty-chunk-block-array* (mak))
-
-(defun cull-hidden-blocks-from-positions-and-symbols (positions-and-symbols)
-  (let ((solid-p-table (get-solid-p-table-from-positions-and-symbols positions-and-symbols))
-        (nil-chunk (loop for x below *chunk-width*
-                         append (loop for y below *chunk-width*
-                                      append (loop for z below *chunk-width*
-                                                   collect (list x y z nil))))))
-    nil-chunk
-    )
-  
-  ;; sooo first grab each symbol's mesh's solid-p.
-  ;; then populate a *chunk-width*^3 volume with nils.
-  ;; then overwrite that volume with the positions-and-symbols at the right locations, so, foreach position-and-symbol in positions-and-symbols, setf volume x y z solidness to solid-p grabbed in step 1.
-  ;; we now have a 3D volume of nils and t's, which we can use to check adjacent blocks for solidness. loop over it all and just return t or nil.
-  ;; blocks on the chunk border get to stay by defualt for now.
-  )
-
 (defun get-solid-p-table-from-positions-and-symbols (positions-and-symbols)
   (let ((solid-p-table (make-hash-table)))
     (loop for position-and-symbol in positions-and-symbols
@@ -47,40 +29,9 @@
                                                                   (when (not (solid-right-p pos chunk-block-array)) 'right)
                                                                   (when (not (solid-left-p pos chunk-block-array)) 'left)
                                                                   (when (not (solid-ahead-p pos chunk-block-array)) 'front)
-                                                                  (when (not (solid-behind-p pos chunk-block-array)) 'back)
-                                                                  )))
-   ;;`(top bottom left right front back)
-                              )
-  
-  )
+                                                                  (when (not (solid-behind-p pos chunk-block-array)) 'back))))))
 
-;; (defun index-ahead (index &optional (chunk-width *chunk-width*))
-;;   (+ index chunk-width))
-
-;; (defun index-behind (index &optional (chunk-width *chunk-width*))
-;;   (- index chunk-width))
-
-;; (defun index-left (index)
-;;   (- index 1))
-
-;; (defun index-right (index)
-;;   (+ index 1))
-
-;; (defun index-above (pos &optional (chunk-width *chunk-width*) (chunk-height *chunk-height*))
-;;   ;;(+ index (* chunk-width chunk-height))
-;;   (3d-to-1d (first pos) (third pos) (+ 1 (second pos))  chunk-width chunk-height)
-;;   )
-
-;; (defun index-below (index &optional (chunk-width *chunk-width*) (chunk-height *chunk-height*))
-;;   (- index (* chunk-width chunk-height)))
-
-;; (defun index-solid-p (index chunk-block-array)
-;;   (and (< -1 index *chunk-size*)
-;;        (aref chunk-block-array index)
-;;        )
-;;   ;; (not (or (> index *chunk-size*)
-;;   ;;          (< index 0)))
-;;   )
+(declaim (inline pos-above pos-below pos-ahead pos-behind pos-left pos-right))
 
 (defun pos-above (pos)
   (vector (aref pos 0)
@@ -116,27 +67,15 @@
   (let ((x (aref pos 0))
         (y (aref pos 1))
         (z (aref pos 2)))
-    (or ;; (and (> x -1)    ;; outside of chunk bounds
-        ;;      (< x *chunk-width*)
-        ;;      (> y -1)
-        ;;      (< y *chunk-height*)
-        ;;      (> z -1)
-        ;;      (< z *chunk-width*))
-        (and (< -1 x *chunk-width*)
-             (< -1 y *chunk-height*)
-             (< -1 z *chunk-width*)
-             (aref chunk-block-array (3d-to-1d x y z)))
-        
-        ;;inside chunk bounds, but aref returns non-nil value
-        )))
+    (and (< -1 x *chunk-width*)
+         (< -1 y *chunk-height*)
+         (< -1 z *chunk-width*)
+         (aref chunk-block-array (3d-to-1d x y z)))))
 
-;; (defun index-solid (index)
-;;   (< -1 index *chunk-size*))
-
-(defun solid-above-p (pos chunk-block-array &optional (chunk-width *chunk-width*))
+(defun solid-above-p (pos chunk-block-array)
   (pos-solid (pos-above pos) chunk-block-array))
 
-(defun solid-below-p (index chunk-block-array &optional (chunk-width *chunk-width*))
+(defun solid-below-p (index chunk-block-array)
   (pos-solid (pos-below index) chunk-block-array))
 
 (defun solid-left-p (index chunk-block-array)
@@ -145,8 +84,8 @@
 (defun solid-right-p (index chunk-block-array)
   (pos-solid (pos-right index) chunk-block-array))
 
-(defun solid-ahead-p (index chunk-block-array &optional (chunk-width *chunk-width*))
+(defun solid-ahead-p (index chunk-block-array)
   (pos-solid (pos-ahead index) chunk-block-array))
 
-(defun solid-behind-p (index chunk-block-array &optional (chunk-width *chunk-width*))
+(defun solid-behind-p (index chunk-block-array)
   (pos-solid (pos-behind index) chunk-block-array))
