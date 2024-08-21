@@ -66,5 +66,5 @@
           (list 
            (list nil nil nil 1 1 t)
            (list 'cobblestone nil nil 0 0 t)
-           (list 'grass nil nil 0 1 t)
-           (list 'bricks nil nil 1 0 t))))
+           (list 'grass nil nil 1 0 t)
+           (list 'bricks nil nil 0 1 t))))

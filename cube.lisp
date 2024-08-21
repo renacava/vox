@@ -34,9 +34,10 @@
     (combine-cube-faces
      (loop for pos-and-symb in positions-and-symbols
            collect (augment-cube-mesh-with-block-symbol-and-offset (make-cube-faces-from-adjacent-solids
-                                                                    (3d-to-1d (first pos-and-symb)
-                                                                              (second pos-and-symb)
-                                                                              (third pos-and-symb))
+                                                                    ;; (3d-to-1d (first pos-and-symb)
+                                                                    ;;           (second pos-and-symb)
+                                                                    ;;           (third pos-and-symb))
+                                                                    (coerce (subseq pos-and-symb 0 3) 'vector)
                                                                     chunk-block-solidity-array)
                                                                    (last1 pos-and-symb)
                                                                    (subseq pos-and-symb 0 3))))

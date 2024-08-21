@@ -1,13 +1,18 @@
 (in-package #:vox)
 
 (defparameter *chunk-width* 16)
-(defparameter *chunk-size* (* *chunk-width* *chunk-width* *chunk-width*))
+(defparameter *chunk-height* 128)
+(defparameter *chunk-size* (* *chunk-width* *chunk-width* *chunk-height*))
 
 (defun set-chunk-width (&optional (width 16))
   (setf *chunk-width* width)
-  (setf *chunk-size* (* *chunk-width* *chunk-width* *chunk-width*)))
+  (setf *chunk-size* (* *chunk-width* *chunk-width* *chunk-height*)))
 
-(defun 3d-to-1d (x y z &optional (cols *chunk-width*) (depth cols))
+(defun set-chunk-height (&optional (height 128))
+  (setf *chunk-height* height)
+  (setf *chunk-size* (* *chunk-width* *chunk-width* *chunk-height*)))
+
+(defun 3d-to-1d (x y z &optional (cols *chunk-width*) (depth *chunk-height*))
   (+ x (* y cols) (* z cols depth)))
 
 ;; (defun 1d-to-3d (index &optional (cols *chunk-width*) (depth cols))
@@ -25,7 +30,7 @@
 ;;          (y (truncate (/ index cols))))
 ;;     (list x y)))
 
-(defparameter cube-front 
+(defparameter cube-back 
   (list
    (list
     (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0))
@@ -35,7 +40,7 @@
     )
    (list 2 1 0 3 2 0)))
 
-(defparameter cube-back 
+(defparameter cube-front
   (list
     (list
            (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0))
@@ -78,12 +83,15 @@
 (defparameter cube-bottom 
   (list
    (list
-           (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0))
-           (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
-           (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
-           (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0))
+           (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0)) ;;0
+           (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0)) ;;1
+           (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0)) ;;2
+           (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0)) ;;3
            )
-    (list 2 1 0 1 3 1)))
+   (list ;;2 1 0 1 3 0
+    ;;2 1 0 1 3 1
+    2 1 0 1 3 0
+         )))
 
 (let ((cache (make-hash-table :test #'equal)))
   (defun build-cube-mesh-from-faces (faces)
@@ -98,8 +106,13 @@
                 collect (append vert (list (2d-to-1d (getf mesh-instance :atlas-column)
                                                      (getf mesh-instance :atlas-row))
                                            (3d-to-1d (float (first offset))
+                                                     
                                                      (float (second offset))
-                                                     (float (third offset))))))
+                                                     (float (third offset)))
+                                           
+                                           1
+                                           ;;(if (> (random 3) 1) 1 0)
+                                           )))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)

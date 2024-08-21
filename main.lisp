@@ -30,7 +30,8 @@
   (vert :float)
   (uv :float)
   (texture-atlas-index :float)
-  (local-offset :float))
+  (local-offset :float)
+  (sunlit-p :int))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :int))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
@@ -58,14 +59,19 @@
                      (proj :mat4)
                      (offset :vec3)
                      (chunk-width :int)
+                     (chunk-height :int)
                      (atlas-size :int))
-  (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-width))
-         (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-width)))
+  (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-height))
+         (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-height)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (now (* 5.5 now))
+         (now (* 0.5 now))
+         ;; (pos (+ pos (vec4
+         ;;              (* -6 (+ 0.5 (sin now)))
+         ;;              -65
+         ;;              -10)))
          (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
                            (- (* 35 (cos (* 2 now))) 33)
                            (- -70
@@ -77,15 +83,22 @@
                     (aref atlas-coords 1)
                     atlas-size))))
     (values (* proj pos)
-            uv)))
+            uv
+            (:flat (block-vert-sunlit-p vert)))))
 
 
-(defun-g frag-stage ((uv :vec2) &uniform (atlas-sampler :sampler-2d))
-  (texture atlas-sampler uv))
+(defun-g frag-stage ((uv :vec2) (sunlit-p :int) &uniform (atlas-sampler :sampler-2d))
+  (let ((sunlight-mult (if (> sunlit-p 0)
+                           1.0
+                           0.5)))
+    (* (texture atlas-sampler uv) sunlight-mult))
+  
+  ;;(texture atlas-sampler uv)
+  )
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
-  (frag-stage :vec2))
+  (frag-stage :vec2 :int))
 
 (defun now ()
   (float
@@ -141,6 +154,7 @@
                             :proj *projection-matrix*
                             :offset (offset chunk)
                             :chunk-width (width chunk)
+                            :chunk-height (height chunk)
                             :atlas-sampler *texture-atlas-sampler*
                             :atlas-size *texture-atlas-size*)))))
              *chunks-at-offsets-table*)
@@ -160,8 +174,8 @@
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))
 
-(defun queue-chunk (mesh-data offset width)
-  (push (list mesh-data offset width) queued-chunks))
+(defun queue-chunk (mesh-data offset width height)
+  (push (list mesh-data offset width height) queued-chunks))
 
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
@@ -177,11 +191,13 @@
                                                   (mesh-data (first queued-chunk))
                                                   (offset (v! (second queued-chunk)))
                                                   (width (third queued-chunk))
+                                                  (height (fourth queued-chunk))
                                                   (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
                                                   (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
                                                   (chunk (when (and vert-array index-array)
                                                            (make-instance 'chunk
                                                                           :width width
+                                                                          :height height
                                                                           :offset offset
                                                                           :vert-array vert-array
                                                                           :index-array index-array
@@ -222,9 +238,4 @@
   (loop (funcall main-loop-func)))
 
 
-(defun make-random-chunk-blocks (&optional (width *chunk-width*))
-  (loop for x below width
-        append (loop for y below width
-                     append (loop for z below width
-                                  when (> 1 (random 3))
-                                  collect (list x y z (elt-random `(grass bricks cobblestone)))))))
+

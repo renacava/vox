@@ -39,54 +39,114 @@
                (setf (aref block-array index) (get-symbol-mesh-solid-p (last1 position-and-symbol)))))
     block-array))
 
-(defun make-cube-faces-from-adjacent-solids (index chunk-block-array)
+(defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)
   (build-cube-mesh-from-faces (remove-if-not #'identity
                                              (remove-if-not #'identity
-                                                            (list (when (not (solid-above-p index chunk-block-array)) 'top)
-                                                                  (when (not (solid-below-p index chunk-block-array)) 'bottom)
-                                                                  (when (not (solid-right-p index chunk-block-array)) 'right)
-                                                                  (when (not (solid-left-p index chunk-block-array)) 'left)
-                                                                  (when (not (solid-ahead-p index chunk-block-array)) 'front)
-                                                                  (when (not (solid-behind-p index chunk-block-array)) 'back)))))
+                                                            (list (when (not (solid-above-p pos chunk-block-array)) 'top)
+                                                                  (when (not (solid-below-p pos chunk-block-array)) 'bottom)
+                                                                  (when (not (solid-right-p pos chunk-block-array)) 'right)
+                                                                  (when (not (solid-left-p pos chunk-block-array)) 'left)
+                                                                  (when (not (solid-ahead-p pos chunk-block-array)) 'front)
+                                                                  (when (not (solid-behind-p pos chunk-block-array)) 'back)
+                                                                  )))
+   ;;`(top bottom left right front back)
+                              )
   
   )
 
-(defun index-above (index &optional (chunk-width *chunk-width*))
-  (+ index chunk-width))
+;; (defun index-ahead (index &optional (chunk-width *chunk-width*))
+;;   (+ index chunk-width))
 
-(defun index-below (index &optional (chunk-width *chunk-width*))
-  (- index chunk-width))
+;; (defun index-behind (index &optional (chunk-width *chunk-width*))
+;;   (- index chunk-width))
 
-(defun index-left (index)
-  (- index 1))
+;; (defun index-left (index)
+;;   (- index 1))
 
-(defun index-right (index)
-  (+ index 1))
+;; (defun index-right (index)
+;;   (+ index 1))
 
-(defun index-ahead (index &optional (chunk-width *chunk-width*))
-  (+ index (* chunk-width chunk-width)))
+;; (defun index-above (pos &optional (chunk-width *chunk-width*) (chunk-height *chunk-height*))
+;;   ;;(+ index (* chunk-width chunk-height))
+;;   (3d-to-1d (first pos) (third pos) (+ 1 (second pos))  chunk-width chunk-height)
+;;   )
 
-(defun index-behind (index &optional (chunk-width *chunk-width*))
-  (- index (* chunk-width chunk-width)))
+;; (defun index-below (index &optional (chunk-width *chunk-width*) (chunk-height *chunk-height*))
+;;   (- index (* chunk-width chunk-height)))
 
-(defun index-solid-p (index chunk-block-array)
-  (and (< -1 index *chunk-size*)
-       (aref chunk-block-array index)))
+;; (defun index-solid-p (index chunk-block-array)
+;;   (and (< -1 index *chunk-size*)
+;;        (aref chunk-block-array index)
+;;        )
+;;   ;; (not (or (> index *chunk-size*)
+;;   ;;          (< index 0)))
+;;   )
 
-(defun solid-above-p (index chunk-block-array &optional (chunk-width *chunk-width*))
-  (index-solid-p (index-above index chunk-width) chunk-block-array))
+(defun pos-above (pos)
+  (vector (aref pos 0)
+          (1+ (aref pos 1))
+          (aref pos 2)))
+
+(defun pos-below (pos)
+  (vector (aref pos 0)
+          (1- (aref pos 1))
+          (aref pos 2)))
+
+(defun pos-ahead (pos)
+  (vector (aref pos 0)
+          (aref pos 1)
+          (1+ (aref pos 2))))
+
+(defun pos-behind (pos)
+  (vector (aref pos 0)
+          (aref pos 1)
+          (1- (aref pos 2))))
+
+(defun pos-left (pos)
+  (vector (1- (aref pos 0))
+          (aref pos 1)
+          (aref pos 2)))
+
+(defun pos-right (pos)
+  (vector (1+ (aref pos 0))
+          (aref pos 1)
+          (aref pos 2)))
+
+(defun pos-solid (pos chunk-block-array)
+  (let ((x (aref pos 0))
+        (y (aref pos 1))
+        (z (aref pos 2)))
+    (or ;; (and (> x -1)    ;; outside of chunk bounds
+        ;;      (< x *chunk-width*)
+        ;;      (> y -1)
+        ;;      (< y *chunk-height*)
+        ;;      (> z -1)
+        ;;      (< z *chunk-width*))
+        (and (< -1 x *chunk-width*)
+             (< -1 y *chunk-height*)
+             (< -1 z *chunk-width*)
+             (aref chunk-block-array (3d-to-1d x y z)))
+        
+        ;;inside chunk bounds, but aref returns non-nil value
+        )))
+
+;; (defun index-solid (index)
+;;   (< -1 index *chunk-size*))
+
+(defun solid-above-p (pos chunk-block-array &optional (chunk-width *chunk-width*))
+  (pos-solid (pos-above pos) chunk-block-array))
 
 (defun solid-below-p (index chunk-block-array &optional (chunk-width *chunk-width*))
-  (index-solid-p (index-below index chunk-width) chunk-block-array))
+  (pos-solid (pos-below index) chunk-block-array))
 
 (defun solid-left-p (index chunk-block-array)
-  (index-solid-p (index-left index) chunk-block-array))
+  (pos-solid (pos-left index) chunk-block-array))
 
 (defun solid-right-p (index chunk-block-array)
-  (index-solid-p (index-right index) chunk-block-array))
+  (pos-solid (pos-right index) chunk-block-array))
 
 (defun solid-ahead-p (index chunk-block-array &optional (chunk-width *chunk-width*))
-  (index-solid-p (index-ahead index chunk-width) chunk-block-array))
+  (pos-solid (pos-ahead index) chunk-block-array))
 
 (defun solid-behind-p (index chunk-block-array &optional (chunk-width *chunk-width*))
-  (index-solid-p (index-behind index chunk-width) chunk-block-array))
+  (pos-solid (pos-behind index) chunk-block-array))
