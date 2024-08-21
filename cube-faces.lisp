@@ -15,20 +15,8 @@
 (defun 3d-to-1d (x y z &optional (cols *chunk-width*) (depth *chunk-height*))
   (+ x (* y cols) (* z cols depth)))
 
-;; (defun 1d-to-3d (index &optional (cols *chunk-width*) (depth cols))
-;;   (let* ((z (truncate (/ index (* cols depth))))
-;;          (index (- index (* z cols depth)))
-;;          (x (mod index cols))
-;;          (y (truncate (/ index cols))))
-;;     (list x y z)))
-
 (defun 2d-to-1d (x y &optional (cols *chunk-width*))
   (+ x (* y cols)))
-
-;; (defun 1d-to-2d (index &optional (cols *chunk-width*))
-;;   (let* ((x (mod index cols))
-;;          (y (truncate (/ index cols))))
-;;     (list x y)))
 
 (defparameter cube-back 
   (list
@@ -36,62 +24,53 @@
     (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0))
     (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 0.0))
     (list (3d-to-1d 1.0 0.0 0.0)  (2d-to-1d 1.0 1.0))
-    (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0))
-    )
+    (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0)))
    (list 2 1 0 3 2 0)))
 
 (defparameter cube-front
   (list
-    (list
-           (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0))
-           (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0))
-           (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0))
-           (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0))
-           )
-    (list 2 1 0 3 2 0)))
+   (list
+    (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0))
+    (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0))
+    (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0))
+    (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0)))
+   (list 2 1 0 3 2 0)))
 
 (defparameter cube-left 
   (list
-    (list
-           (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
-           (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
-           (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0))
-           (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0))
-           )
-    (list 1 2 0 2 3 0)))
+   (list
+    (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
+    (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
+    (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0))
+    (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0)))
+   (list 1 2 0 2 3 0)))
 
 (defparameter cube-right 
   (list
-    (list
-           (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
-           (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0))
-           (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
-           (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0))
-           )
-    (list 3 2 0 1 3 0)))
+   (list
+    (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
+    (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0))
+    (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
+    (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0)))
+   (list 3 2 0 1 3 0)))
 
 (defparameter cube-top 
   (list
-    (list
-           (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0))
-           (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
-           (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
-           (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0))
-           )
-    (list 2 1 0 3 2 0)))
+   (list
+    (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0))
+    (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
+    (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
+    (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0)))
+   (list 2 1 0 3 2 0)))
 
 (defparameter cube-bottom 
   (list
    (list
-           (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0)) ;;0
-           (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0)) ;;1
-           (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0)) ;;2
-           (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0)) ;;3
-           )
-   (list ;;2 1 0 1 3 0
-    ;;2 1 0 1 3 1
-    2 1 0 1 3 0
-         )))
+    (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0))
+    (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
+    (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
+    (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0)))
+   (list 2 1 0 1 3 0)))
 
 (let ((cache (make-hash-table :test #'equal)))
   (defun build-cube-mesh-from-faces (faces)
@@ -110,9 +89,7 @@
                                                      (float (second offset))
                                                      (float (third offset)))
                                            
-                                           1
-                                           ;;(if (> (random 3) 1) 1 0)
-                                           )))
+                                           1)))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)
@@ -137,28 +114,9 @@
                                      collect (+ index-offset index))
                         do (incf index-offset (length vert-list)))))
     
-    (list verts
-          
-          indices
-          ;; (make-array (length indices)
-          ;;             :element-type 'fixnum
-          ;;             :initial-contents indices)
-          )))
+    (list verts indices)))
 
 (let ((cube-mesh (build-cube-mesh-from-faces `(front back left right top bottom))))
   (defparameter *cube-verts* (first cube-mesh))
   (defparameter *cube-n-verts* (length *cube-verts*))
   (defparameter *cube-indices* (second cube-mesh)))
-
-
-;; (declaim (type fixnum *cube-n-verts*)
-;;          (type (simple-array fixnum) *cube-indices*))
-;; (defparameter *cube-n-verts* (length *cube-verts*))
-
-;; (defparameter *cube-indices* (make-array 36 :element-type 'fixnum
-;;                                             :initial-contents (vector 2 1 0 3 2 0
-;;                                                                       6 5 4 7 6 4
-;;                                                                       9 10 8 10 11 8
-;;                                                                       15 14 12 13 15 12
-;;                                                                       18 17 16 19 18 16
-;;                                                                       22 21 20 21 23 20)))

@@ -68,10 +68,6 @@
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
          (now (* 0.5 now))
-         ;; (pos (+ pos (vec4
-         ;;              (* -6 (+ 0.5 (sin now)))
-         ;;              -65
-         ;;              -10)))
          (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
                            (- (* 35 (cos (* 2 now))) 33)
                            (- -70
@@ -91,10 +87,7 @@
   (let ((sunlight-mult (if (> sunlit-p 0)
                            1.0
                            0.5)))
-    (* (texture atlas-sampler uv) sunlight-mult))
-  
-  ;;(texture atlas-sampler uv)
-  )
+    (* (texture atlas-sampler uv) sunlight-mult)))
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
@@ -166,7 +159,7 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 512)
+(defparameter chunk-queue-max-size 8)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
@@ -221,8 +214,9 @@
                                        (livesupport:update-repl-link)
                                        (sleep 0.01))
                                      (let ((start-time (now)))
-                                       (setf (resolution (current-viewport))
-                                             (get-cepl-context-surface-resolution))
+                                       (ignore-errors
+                                        (setf (resolution (current-viewport))
+                                              (get-cepl-context-surface-resolution)))
                                        (step-rendering)
                                        (step-host)
                                        (livesupport:update-repl-link)

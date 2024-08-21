@@ -24,30 +24,16 @@
                 collect (+ index index-offset)))))
 
 (defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
-  (let (;;(index-offset -1)
-        (chunk-block-solidity-array (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols))
-        )
-    ;; (loop for pos-and-symb in positions-and-symbols
-    ;;       collect (make-block-verts-and-indices (subseq pos-and-symb 0 3)
-    ;;                                             (incf index-offset)
-    ;;                                             (last1 pos-and-symb)))
+  (let ((chunk-block-solidity-array (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
     (combine-cube-faces
      (loop for pos-and-symb in positions-and-symbols
            collect (augment-cube-mesh-with-block-symbol-and-offset (make-cube-faces-from-adjacent-solids
-                                                                    ;; (3d-to-1d (first pos-and-symb)
-                                                                    ;;           (second pos-and-symb)
-                                                                    ;;           (third pos-and-symb))
                                                                     (coerce (subseq pos-and-symb 0 3) 'vector)
                                                                     chunk-block-solidity-array)
                                                                    (last1 pos-and-symb)
-                                                                   (subseq pos-and-symb 0 3))))
-    ))
+                                                                   (subseq pos-and-symb 0 3))))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
-  (let* (;;(vert-vecs (mapcar #'first blocks-verts-and-indices))
-         ;;(index-lists (mapcar #'second blocks-verts-and-indices))
-         ;;(verts (loop for vert-list in vert-vecs append vert-list))
-         ;;(indices (apply #'concatenate 'list index-lists))
-         (vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
+  (let* ((vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
          (index-c-array (make-c-array (second blocks-verts-and-indices) :element-type :uint)))
     (list vert-c-array index-c-array)))
