@@ -137,7 +137,7 @@
 
 (defun step-rendering ()
   (unless *rendering-paused?*
-    (clear)
+    (ignore-errors (clear))
     (setup-projection-matrix)
     (maphash (lambda (offset chunk)
                (when (eq 'chunk (type-of chunk))
@@ -233,9 +233,10 @@
                                  (funcall inner-loader-thread-func))))
 
 (defun main ()
-  (cepl:repl 720 480)
+  (ignore-errors (cepl:repl 720 480))
   (init)
-  (loop (funcall main-loop-func)))
+  (loop (funcall main-loop-func))
+  )
 
 
 
