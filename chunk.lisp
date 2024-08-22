@@ -40,7 +40,7 @@
        (loop for offset-group in offset-groups
              do (lparallel:pmapcar (lambda (offset)
                                      (make-chunk offset
-                                                 (vox-world-sample:make-random-chunk-blocks offset)
+                                                 (vox-world-sample:make-slicey-chunk offset)
                                                  width
                                                  height))
                                    offset-group))))))
