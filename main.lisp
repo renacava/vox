@@ -263,7 +263,9 @@
   )
 
 (defun pause ()
-  (setf *rendering-paused?* (not *rendering-paused?*)))
+  (if (setf *rendering-paused?* (not *rendering-paused?*))
+      'paused
+      'unpaused))
 
 (defun destroy-world ()
   (ignore-errors (lparallel:kill-tasks :default))
