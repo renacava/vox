@@ -94,7 +94,8 @@
          (texture-sample (texture atlas-sampler uv))
          (sunlit-texture (* texture-sample sunlight-mult))
          (height-lit-texture (* sunlit-texture (min (max 0 (- -0.2 (/ 24 (aref pos 1)))) 1)))
-         (depth-fogged-texture height-lit-texture)
+         (depth-fogged-texture texture-sample;;height-lit-texture
+           )
          (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
          ;;(vis-mult (min 1 (/ 1 (* (aref pos 2) -0.005))))
          )
@@ -104,10 +105,11 @@
     ;;                                           0
     ;;                                           0.5))
     ;;height-lit-texture
+    ;;(vec4 0.35 0.35 1.0 1.0)
     (vec4
-     (lerp 0.2 (aref depth-fogged-texture 0) fog-mult)
-     (lerp 0.2 (aref depth-fogged-texture 1) fog-mult)
-     (lerp 0.3 (aref depth-fogged-texture 2) fog-mult)
+     (lerp 0.7 (aref depth-fogged-texture 0) fog-mult)
+     (lerp 0.7 (aref depth-fogged-texture 1) fog-mult)
+     (lerp 1.0 (aref depth-fogged-texture 2) fog-mult)
      ;;(lerp 0.0 (aref depth-fogged-texture 3) vis-mult)
      1.0
      ;;0.0
@@ -157,6 +159,7 @@
 (defun step-rendering ()
   (unless *rendering-paused?*
     (ignore-errors (clear))
+    (setf (clear-color) (vec4 0.0 0.45 1.0 1.0))
     (setup-projection-matrix)
     (maphash (lambda (offset chunk)
                (when (eq 'chunk (type-of chunk))
