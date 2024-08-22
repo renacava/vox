@@ -1,16 +1,5 @@
 (in-package #:vox)
 
-(defun make-random-chunk-blocks (&optional (width *chunk-width*) (height *chunk-height*))
-  (loop for x below width
-        append (loop for z below width
-                     append (loop for y below height
-                                  ;;when (> 1 (random 3))
-                                  collect (list x y z
-                                                (cond ((< y 4) 'bricks)
-                                                      ((< y 16) 'cobblestone)
-                                                      ((< y 20) 'grass)
-                                                      (t nil)))))))
-
 (defclass chunk ()
   ((buffer-stream :initarg :buffer-stream
                   :accessor buffer-stream
@@ -51,7 +40,7 @@
        (loop for offset-group in offset-groups
              do (lparallel:pmapcar (lambda (offset)
                                      (make-chunk offset
-                                                 (make-random-chunk-blocks)
+                                                 (vox-world-sample:make-random-chunk-blocks offset)
                                                  width
                                                  height))
                                    offset-group))))))

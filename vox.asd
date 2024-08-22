@@ -21,7 +21,8 @@
                #:fiveam
                #:deploy
                #:lparallel
-               #:precise-time)
+               #:precise-time
+               #:vox-world-sample)
   :components ((:file "package")
                (:file "utilities")
                (:file "cube")

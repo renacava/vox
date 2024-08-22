@@ -14,7 +14,7 @@
             ,@body)
        (setf *rendering-paused?* prior-state))))
 
-(defun setup-lparallel-kernel (&optional (worker-threads 16))
+(defun setup-lparallel-kernel (&optional (worker-threads 2))
   (unless lparallel:*kernel*
     (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
@@ -67,11 +67,14 @@
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
-         (now (* 0.5 now))
-         (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
-                           (- (* 35 (cos (* 2 now))) 33)
-                           (- -70
-                              (* 10 (+ 1 (sin (* 5 now))))))))
+         (now (* 1.5 now))
+         (pos (+ pos (vec4 (+ -256 (* -256 (sin (* 0.25 now))))
+                           (+ -50 (sin now))
+                           (+ -540 (* 200 (+ 1 (sin (* 1.5 now))))))))
+         ;; (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
+         ;;                   (- (* 35 (cos (* 2 now))) 33)
+         ;;                   (- -120
+         ;;                      (* 10 (+ 1 (sin (* 5 now))))))))
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
          (uv (/ (1d-to-2d (block-vert-uv vert) chunk-width) 2))
          (uv (+ uv (atlas-column-row-to-uv-offset
@@ -159,7 +162,7 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 64)
+(defparameter chunk-queue-max-size 4)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
