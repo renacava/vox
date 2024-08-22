@@ -83,18 +83,21 @@
                     atlas-size))))
     (values (* proj pos)
             uv
-            (:flat (block-vert-sunlit-p vert)))))
+            (:flat (block-vert-sunlit-p vert))
+            (aref pos 1))))
 
 
-(defun-g frag-stage ((uv :vec2) (sunlit-p :int) &uniform (atlas-sampler :sampler-2d))
+(defun-g frag-stage ((uv :vec2) (sunlit-p :int) (height :float) &uniform (atlas-sampler :sampler-2d))
   (let ((sunlight-mult (if (> sunlit-p 0)
                            1.0
                            0.5)))
-    (* (texture atlas-sampler uv) sunlight-mult)))
+    (* (texture atlas-sampler uv)
+       sunlight-mult
+       (min (- 0.4 (/ 8 height)) 1))))
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
-  (frag-stage :vec2 :int))
+  (frag-stage :vec2 :int :float))
 
 (defun now ()
   (float
@@ -122,7 +125,7 @@
                              (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
                              (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
   (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
-                                        :minify-filter :nearest-mipmap-nearest
+                                        :minify-filter :linear-mipmap-linear
                                         :magnify-filter :nearest))
   (make-chunks radius width))
 
