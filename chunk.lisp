@@ -38,13 +38,14 @@
     (bt:make-thread
      (lambda ()
        (loop for offset-group in offset-groups
-             do (lparallel:pmapcar (lambda (offset)
-                                     (make-chunk offset
-                                                 (vox-world-sample:make-random-chunk-blocks offset)
-                                                 ;;(vox-world-sample:make-slicey-chunk offset)
-                                                 width
-                                                 height))
-                                   offset-group))))))
+             do (ignore-errors
+                 (lparallel:pmapcar (lambda (offset)
+                                      (make-chunk offset
+                                                  (vox-world-sample:make-random-chunk-blocks offset)
+                                                  ;;(vox-world-sample:make-slicey-chunk offset)
+                                                  width
+                                                  height))
+                                    offset-group)))))))
 
 (defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*) (height *chunk-height*))
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."

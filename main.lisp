@@ -262,5 +262,11 @@
   (loop (funcall main-loop-func))
   )
 
+(defun pause ()
+  (setf *rendering-paused?* (not *rendering-paused?*)))
 
-
+(defun destroy-world ()
+  (ignore-errors (lparallel:kill-tasks :default))
+  (ignore-errors (lparallel:end-kernel))
+  (setup-lparallel-kernel)
+  (setf chunks-queued-to-be-freed? t))
