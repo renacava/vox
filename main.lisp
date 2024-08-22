@@ -84,20 +84,40 @@
     (values (* proj pos)
             uv
             (:flat (block-vert-sunlit-p vert))
-            (aref pos 1))))
+            pos)))
 
 
-(defun-g frag-stage ((uv :vec2) (sunlit-p :int) (height :float) &uniform (atlas-sampler :sampler-2d))
-  (let ((sunlight-mult (if (> sunlit-p 0)
-                           1.0
-                           0.5)))
-    (* (texture atlas-sampler uv)
-       sunlight-mult
-       (min (- 0.4 (/ 8 height)) 1))))
+(defun-g frag-stage ((uv :vec2) (sunlit-p :int) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
+  (let* ((sunlight-mult (if (> sunlit-p 0)
+                            1.0
+                            0.5))
+         (texture-sample (texture atlas-sampler uv))
+         (sunlit-texture (* texture-sample sunlight-mult))
+         (height-lit-texture (* sunlit-texture (min (max 0 (- -0.2 (/ 24 (aref pos 1)))) 1)))
+         (depth-fogged-texture height-lit-texture)
+         (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
+         ;;(vis-mult (min 1 (/ 1 (* (aref pos 2) -0.005))))
+         )
+    ;; (setf (aref depth-fogged-texture 3)
+    ;;       0.5)
+    ;; (setf (aref depth-fogged-texture 2) (lerp (aref depth-fogged-texture 3)
+    ;;                                           0
+    ;;                                           0.5))
+    ;;height-lit-texture
+    (vec4
+     (lerp 0.2 (aref depth-fogged-texture 0) fog-mult)
+     (lerp 0.2 (aref depth-fogged-texture 1) fog-mult)
+     (lerp 0.3 (aref depth-fogged-texture 2) fog-mult)
+     ;;(lerp 0.0 (aref depth-fogged-texture 3) vis-mult)
+     1.0
+     ;;0.0
+     )
+    ;;depth-fogged-texture
+    ))
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
-  (frag-stage :vec2 :int :float))
+  (frag-stage :vec2 :int :vec4))
 
 (defun now ()
   (float
@@ -155,7 +175,8 @@
                             :chunk-width (width chunk)
                             :chunk-height (height chunk)
                             :atlas-sampler *texture-atlas-sampler*
-                            :atlas-size *texture-atlas-size*)))))
+                            :atlas-size *texture-atlas-size*)
+                     ))))
              *chunks-at-offsets-table*)
     
     (step-host)
