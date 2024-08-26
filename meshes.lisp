@@ -59,12 +59,14 @@
 (defun get-symbol-mesh-solid-p (block-symbol)
   (gethash block-symbol *block-solidity-table*))
 
-(progn
+(defun setup-mesh-table ()
   (defparameter *symbol-mesh-table* (make-hash-table))
-  
+  (setup-default-cube-mesh)
   (mapcar (lambda (data) (apply #'bind-block-symbol-to-mesh data))
           (list 
            (list nil nil nil 1 1 t)
            (list 'cl-user::cobblestone nil nil 0 0 t)
            (list 'cl-user::grass nil nil 1 0 t)
            (list 'cl-user::bricks nil nil 0 1 t))))
+
+(setup-mesh-table)

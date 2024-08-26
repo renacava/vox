@@ -1,9 +1,6 @@
 (in-package #:vox)
 
 (defparameter *projection-matrix* nil)
-(defparameter *texture-atlas-tex* nil)
-(defparameter *texture-atlas-sampler* nil)
-(defparameter *texture-atlas-size* 2)
 (defparameter *rendering-paused?* nil)
 
 (defmacro with-paused-rendering (&body body)
@@ -33,11 +30,11 @@
   (local-offset :float)
   (sunlit-p :int))
 
-(defun-g id-to-uv-offset ((id :int) (atlas-size :int))
+(defun-g id-to-uv-offset ((id :int) (atlas-size :float))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
         (/ (float (/ id atlas-size)) atlas-size)))
 
-(defun-g atlas-column-row-to-uv-offset ((column :float) (row :float) (atlas-size :int))
+(defun-g atlas-column-row-to-uv-offset ((column :float) (row :float) (atlas-size :float))
   (vec2 (/ column atlas-size)
         (/ row atlas-size)))
 
@@ -53,6 +50,11 @@
          (y (int (/ index cols))))
     (vec2 x y)))
 
+(defun-g calc-uv ((row :float) (col :float) (atlas-size :float) (uv :vec2))
+  (let ((atlas-offset (/ 1.0 atlas-size)))
+    (vec2 (+ (* row atlas-offset) (* (aref uv 0) atlas-offset))
+          (+ (* col atlas-offset) (* (aref uv 1) atlas-offset)))))
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
@@ -60,7 +62,7 @@
                      (offset :vec3)
                      (chunk-width :int)
                      (chunk-height :int)
-                     (atlas-size :int))
+                     (atlas-size :float))
   (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-height))
          (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-height)))
          (pos (vec4 pos 1))
@@ -68,19 +70,26 @@
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
          (now (* 1.5 now))
-         (pos (+ pos (vec4 (+ -256 (* -256 (sin (* 0.25 now))))
-                           (+ -50 (sin now))
-                           (+ -540 (* 200 (+ 1 (sin (* 1.5 now))))))))
+         (pos (+ pos (vec4 (+ -256 (* -256 (sin (* 0.25 now)))
+                              )
+                           (+ -50 (sin now)
+                              )
+                           (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))
+                              ))))
          ;; (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
          ;;                   (- (* 35 (cos (* 2 now))) 33)
          ;;                   (- -120
          ;;                      (* 10 (+ 1 (sin (* 5 now))))))))
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
-         (uv (/ (1d-to-2d (block-vert-uv vert) chunk-width) 2))
-         (uv (+ uv (atlas-column-row-to-uv-offset
-                    (aref atlas-coords 0)
-                    (aref atlas-coords 1)
-                    atlas-size))))
+         (uv (1d-to-2d (block-vert-uv vert) atlas-size))
+         (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv))
+         ;; (uv (+ uv (atlas-column-row-to-uv-offset
+         ;;            (aref atlas-coords 0)
+         ;;            (aref atlas-coords 1)
+         ;;            ;;atlas-size
+         ;;            atlas-size
+         ;;            )))
+         )
     (values (* proj pos)
             uv
             (:flat (block-vert-sunlit-p vert))
@@ -139,8 +148,7 @@
                                                              10000f0
                                                              60f0)))
 
-(defun init (&optional (width *chunk-width*) (radius 8))
-  (setf (surface-title (current-surface)) "vox")
+(defun load-texture-atlas ()
   (with-paused-rendering
     (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*))
   (setf *texture-atlas-tex* (or 
@@ -149,6 +157,16 @@
   (setf *texture-atlas-sampler* (sample *texture-atlas-tex*
                                         :minify-filter :linear-mipmap-linear
                                         :magnify-filter :nearest))
+  (setf *texture-atlas-size*
+        (truncate (/ (first (texture-base-dimensions *texture-atlas-tex*))
+                     *texture-cell-size*))))
+
+(defun init (&optional (width *chunk-width*) (radius 8))
+  (setf (surface-title (current-surface)) "vox")
+  (with-paused-rendering
+    (resolve-textures))
+  
+  ;;(load-texture-atlas)
   (make-chunks radius width))
 
 (defparameter *delta* 1.0)
@@ -178,7 +196,7 @@
                             :chunk-width (width chunk)
                             :chunk-height (height chunk)
                             :atlas-sampler *texture-atlas-sampler*
-                            :atlas-size *texture-atlas-size*)
+                            :atlas-size (coerce *texture-atlas-size* 'single-float))
                      ))))
              *chunks-at-offsets-table*)
     
