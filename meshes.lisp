@@ -67,6 +67,7 @@
            (list nil nil nil 1 1 t)
            (list 'cl-user::cobblestone nil nil 0 0 t)
            (list 'cl-user::grass nil nil 1 0 t)
-           (list 'cl-user::bricks nil nil 0 1 t))))
+           (list 'cl-user::bricks nil nil 0 1 t)
+           (list 'cl-user::red nil nil 1 1 t))))
 
 (setup-mesh-table)

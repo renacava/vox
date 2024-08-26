@@ -76,10 +76,7 @@
                               )
                            (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))
                               ))))
-         ;; (pos (+ pos (vec4 (- (* 35 (sin (* 2 now)) 1) 33)
-         ;;                   (- (* 35 (cos (* 2 now))) 33)
-         ;;                   (- -120
-         ;;                      (* 10 (+ 1 (sin (* 5 now))))))))
+
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
          (uv (1d-to-2d (block-vert-uv vert) atlas-size))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv))
@@ -161,13 +158,13 @@
         (truncate (/ (first (texture-base-dimensions *texture-atlas-tex*))
                      *texture-cell-size*))))
 
-(defun init (&optional (width *chunk-width*) (radius 8))
+(defun init (&optional (width *chunk-width*) (radius-x 8) (radius-z radius-x))
   (setf (surface-title (current-surface)) "vox")
   (with-paused-rendering
     (resolve-textures))
   
   ;;(load-texture-atlas)
-  (make-chunks radius width))
+  (make-chunks radius-x width *chunk-height* radius-z))
 
 (defparameter *delta* 1.0)
 (defparameter *fps* 1)

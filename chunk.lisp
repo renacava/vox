@@ -28,11 +28,11 @@
     (try-free-objects buffer-stream index-array vert-array)
     (setf chunk nil)))
 
-(defun make-chunks (radius &optional (width *chunk-width*) (height *chunk-height*))
+(defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)
   (setf chunks-queued-to-be-freed? t)
-  (let* ((chunk-offsets (loop for i below radius
-                              append (loop for j below radius
+  (let* ((chunk-offsets (loop for i below radius-x
+                              append (loop for j below radius-z
                                            collect (list j 0 (truncate i)))))
          (offset-groups (group chunk-offsets 6)))
     (bt:make-thread
