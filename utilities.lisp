@@ -1586,9 +1586,16 @@ It works because Common Lisp passes everything by value, not by reference, excep
 (defun ensure-float (value &optional (alternative 0.0))
   (float (ensure-number value alternative)))
 
-
 (defun box-muller-transform (&optional (u1 (random 1.0d0)) (u2 (random 1.0d0)))
   "Given arguments sampled from the uniform distribution [0, 1], returns an independent random variables with a standard normal distribution. Will not produce random variables more than 9.419 standard deviations from the mean."
   (*
    (sqrt (* -2 (log u1)))
    (cos (* 2 pi u2))))
+
+(defun make-list-func (size func)
+  (declare (type fixnum size)
+           (type function func))
+  (do ((count size (1- count))
+       (result '() (cons (funcall func) result)))
+      ((<= count 0) result)
+    (declare (type fixnum count))))
