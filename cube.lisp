@@ -6,23 +6,6 @@
 (defun make-ivec3 (x y z)
   (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
 
-(defun make-block-verts-and-indices (offset &optional (index-offset 0) (block-symbol nil))
-  (declare (optimize (speed 3) (safety 3))
-           (type fixnum index-offset))
-  (let ((mesh
-
-          (get-mesh-bound-to-block-symbol block-symbol)))
-    (setf index-offset (* index-offset (getf mesh :n-verts)))
-    (list (mapcar (lambda (vert)
-                    (append vert (list (2d-to-1d (getf mesh :atlas-column)
-                                                 (getf mesh :atlas-row))
-                                       (3d-to-1d (float (first offset))
-                                                 (float (second offset))
-                                                 (float (third offset))))))
-                  (getf mesh :verts))
-          (loop for index fixnum in (getf mesh :indices)
-                collect (+ index index-offset)))))
-
 (defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
   (let ((chunk-block-solidity-array (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
     (combine-cube-faces
