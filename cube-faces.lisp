@@ -6,7 +6,7 @@
 
 (defparameter *texture-atlas-tex* nil)
 (defparameter *texture-atlas-sampler* nil)
-(defparameter *texture-atlas-size* 1)
+(defparameter *texture-atlas-size* 1f0)
 (defparameter *texture-cell-size* 16)
 
 (defun face-direction-to-sunlight-mult (face-direction)

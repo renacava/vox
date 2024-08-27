@@ -154,10 +154,10 @@
   (vert-stage block-vert)
   (frag-stage :vec2 :int :float :vec4))
 
-(declaim (notinline now))
-
-(defun now ()
-  (/ (get-internal-real-time) internal-time-units-per-second 6.0))
+(let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 6.0)) 'single-float)))
+  (declare (type single-float time-divisor))
+  (defun now ()
+    (/ (get-internal-real-time) time-divisor)))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -177,8 +177,10 @@
                                         :minify-filter :linear-mipmap-linear
                                         :magnify-filter :nearest))
   (setf *texture-atlas-size*
-        (truncate (/ (first (texture-base-dimensions *texture-atlas-tex*))
-                     *texture-cell-size*))))
+        (coerce
+         (truncate (/ (first (texture-base-dimensions *texture-atlas-tex*))
+                      *texture-cell-size*))
+         'single-float)))
 
 (defun init (&optional (width *chunk-width*) (radius-x 8) (radius-z radius-x))
   (setf (surface-title (current-surface)) "vox")
@@ -197,27 +199,30 @@
 (defun step-rendering ()
   (unless *rendering-paused?*
     (ignore-errors (clear))
-
-    (maphash (lambda (offset chunk)
-               (when (eq 'chunk (type-of chunk))
-                 (unless (ignore-errors (buffer-stream chunk))
-                   (when (and (vert-array chunk) (index-array chunk))
-                     (setf (buffer-stream chunk) (make-buffer-stream
-                                                  (vert-array chunk)
-                                                  :index-array (index-array chunk)
-                                                  :retain-arrays nil))))
-                 (unless *rendering-paused?*
-                   (when (< 0 (buffer-stream-length (buffer-stream chunk)))
-                     (map-g #'basic-pipeline (buffer-stream chunk)
-                            :now (now)
-                            :proj *projection-matrix*
-                            :offset (offset chunk)
-                            :chunk-width (width chunk)
-                            :chunk-height (height chunk)
-                            :atlas-sampler *texture-atlas-sampler*
-                            :atlas-size (coerce *texture-atlas-size* 'single-float))
-                     ))))
-             *chunks-at-offsets-table*)
+    (let ((now (now)))
+      (maphash (lambda (offset entry)
+                 (let ((chunk (car entry))
+                       (buffer (cadr entry)))
+                   (when chunk
+                     (unless buffer
+                       (when (and (vert-array chunk) (index-array chunk))
+                         (setf buffer (make-buffer-stream
+                                       (vert-array chunk)
+                                       :index-array (index-array chunk)
+                                       :retain-arrays nil)
+                               (buffer-stream chunk) buffer
+                               (gethash offset *chunks-at-offsets-table*) (list chunk buffer))))
+                     (unless *rendering-paused?*
+                       (map-g #'basic-pipeline buffer
+                              :now now
+                              :proj *projection-matrix*
+                              :offset (offset chunk)
+                              :chunk-width (width chunk)
+                              :chunk-height (height chunk)
+                              :atlas-sampler *texture-atlas-sampler*
+                              :atlas-size *texture-atlas-size*)))))
+               *chunks-at-offsets-table*))
+    
     
     (step-host)
     (swap)))
@@ -267,7 +272,7 @@
                                                  (let* ((offset (second queued-chunk))
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free existing-chunk))
-                                                   (setf (gethash offset *chunks-at-offsets-table*) chunk))
+                                                   (setf (gethash offset *chunks-at-offsets-table*) (list chunk nil)))
                                                  (try-free-objects vert-array index-array))))))
 
 (defun get-cepl-context-surface-resolution ()
