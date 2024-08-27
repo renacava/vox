@@ -76,7 +76,7 @@
                            (+ -50 (sin now))
                            (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))))))
 
-         (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
+         (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))
          (uv (1d-to-2d (block-vert-uv vert) atlas-size))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
     (values (* proj pos)
