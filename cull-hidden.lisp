@@ -13,12 +13,17 @@
   (make-array *chunk-size* :initial-element nil))
 
 (defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
-  (let ((block-array (make-empty-chunk-block-array)))  
+  (let ((block-array (make-empty-chunk-block-array))
+        (highest-block 0))  
     (loop for position-and-symbol in positions-and-symbols
           do (let ((index (3d-to-1d (first position-and-symbol)
                                     (second position-and-symbol)
-                                    (third position-and-symbol))))
-               (setf (aref block-array index) (get-symbol-mesh-solid-p (last1 position-and-symbol)))))
+                                    (third position-and-symbol)))
+                   (solid? (get-symbol-mesh-solid-p (last1 position-and-symbol))))
+               (when (and solid?
+                          (> (second position-and-symbol) highest-block))
+                 (setf highest-block (second position-and-symbol)))
+               (setf (aref block-array index) solid?)))
     block-array))
 
 (defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)

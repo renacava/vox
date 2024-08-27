@@ -11,7 +11,7 @@
             ,@body)
        (setf *rendering-paused?* prior-state))))
 
-(defun setup-lparallel-kernel (&optional (worker-threads 2))
+(defun setup-lparallel-kernel (&optional (worker-threads 4))
   (unless lparallel:*kernel*
     (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
@@ -154,16 +154,10 @@
   (vert-stage block-vert)
   (frag-stage :vec2 :int :float :vec4))
 
+(declaim (notinline now))
+
 (defun now ()
-  (float
-   (/ (second (multiple-value-list
-             (truncate (multiple-value-bind (seconds subseconds) 
-                           (get-precise-time)
-                         (+ (* seconds precise-time-units-per-second) subseconds))
-                       (* precise-time-units-per-second 100000))))
-      60000000)))
-
-
+  (/ (get-internal-real-time) internal-time-units-per-second 6.0))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -190,7 +184,8 @@
   (setf (surface-title (current-surface)) "vox")
   (with-paused-rendering
     (resolve-textures))
-  
+  (setf (clear-color) sky-colour)
+  (setup-projection-matrix)
   ;;(load-texture-atlas)
   (make-chunks radius-x width *chunk-height* radius-z))
 
@@ -202,8 +197,7 @@
 (defun step-rendering ()
   (unless *rendering-paused?*
     (ignore-errors (clear))
-    (setf (clear-color) sky-colour)
-    (setup-projection-matrix)
+
     (maphash (lambda (offset chunk)
                (when (eq 'chunk (type-of chunk))
                  (unless (ignore-errors (buffer-stream chunk))
@@ -232,7 +226,7 @@
 (defparameter dirty? nil)
 (defparameter flipflop nil)
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 4)
+(defparameter chunk-queue-max-size 16)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
