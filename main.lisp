@@ -26,6 +26,7 @@
 (defstruct-g block-vert
   (vert :float)
   (uv :float)
+  (sunlit-mult :float)
   (texture-atlas-index :float)
   (local-offset :float)
   (sunlit-p :int))
@@ -70,62 +71,88 @@
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
          (now (* 1.5 now))
-         (pos (+ pos (vec4 (+ -256 (* -256 (sin (* 0.25 now)))
+         (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
                               )
-                           (+ -50 (sin now)
-                              )
-                           (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))
-                              ))))
+                           (+ -50 (sin now))
+                           (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))))))
 
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) chunk-width))
          (uv (1d-to-2d (block-vert-uv vert) atlas-size))
-         (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv))
-         ;; (uv (+ uv (atlas-column-row-to-uv-offset
-         ;;            (aref atlas-coords 0)
-         ;;            (aref atlas-coords 1)
-         ;;            ;;atlas-size
-         ;;            atlas-size
-         ;;            )))
-         )
+         (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
     (values (* proj pos)
             uv
             (:flat (block-vert-sunlit-p vert))
+            (block-vert-sunlit-mult vert)
             pos)))
 
 
-(defun-g frag-stage ((uv :vec2) (sunlit-p :int) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
-  (let* ((sunlight-mult (if (> sunlit-p 0)
-                            1.0
-                            0.5))
-         (texture-sample (texture atlas-sampler uv))
-         (sunlit-texture (* texture-sample sunlight-mult))
-         (height-lit-texture (* sunlit-texture (min (max 0 (- -0.2 (/ 24 (aref pos 1)))) 1)))
-         (depth-fogged-texture texture-sample;;height-lit-texture
-           )
-         (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
-         ;;(vis-mult (min 1 (/ 1 (* (aref pos 2) -0.005))))
-         )
-    ;; (setf (aref depth-fogged-texture 3)
-    ;;       0.5)
-    ;; (setf (aref depth-fogged-texture 2) (lerp (aref depth-fogged-texture 3)
-    ;;                                           0
-    ;;                                           0.5))
-    ;;height-lit-texture
-    ;;(vec4 0.35 0.35 1.0 1.0)
-    (vec4
-     (lerp 0.7 (aref depth-fogged-texture 0) fog-mult)
-     (lerp 0.7 (aref depth-fogged-texture 1) fog-mult)
-     (lerp 1.0 (aref depth-fogged-texture 2) fog-mult)
-     ;;(lerp 0.0 (aref depth-fogged-texture 3) vis-mult)
-     1.0
-     ;;0.0
-     )
-    ;;depth-fogged-texture
-    ))
+
+(defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
+
+(progn
+  (setf sky-colour (vec4 0.0 0.45 1.0 1.0))
+  (defun-g frag-stage ((uv :vec2) (sunlit-p :int) (sunlit-mult :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
+    (let* ((texture-sample (texture atlas-sampler uv))
+           (texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
+          (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01)))))
+     (vec4
+      (lerp 0.7 (aref texture-sample 0) fog-mult)
+      (lerp 0.7 (aref texture-sample 1) fog-mult)
+      (lerp 1.0 (aref texture-sample 2) fog-mult)
+      1.0)))
+ )
+
+
+
+
+
+
+
+
+
+
+
+
+;; (progn
+  
+;;   ;;(setf sky-colour (vec4 0.0 0.45 1.0 1.0))
+;;   (setf sky-colour (vec4 0.0 0.0 0.0 1.0))
+;;   (defun-g frag-stage ((uv :vec2) (sunlit-p :int) (sunlit-mult :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
+;;    (let* ((sunlight-mult (if (> sunlit-p 0)
+;;                              1.0
+;;                              0.5))
+;;           (texture-sample (texture atlas-sampler uv))
+;;           ;;(sunlit-texture (* texture-sample sunlight-mult))
+;;           ;;(height-lit-texture (* sunlit-texture (min (max 0 (- -0.2 (/ 24 (aref pos 1)))) 1)))
+;;           ;; (depth-fogged-texture texture-sample;;height-lit-texture
+;;           ;;   )
+;;           (texture-sample (* texture-sample 0.7))
+;;           ;;(texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
+;;           (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
+;;           ;;(vis-mult (min 1 (/ 1 (* (aref pos 2) -0.005))))
+;;           )
+;;      ;; (setf (aref depth-fogged-texture 3)
+;;      ;;       0.5)
+;;      ;; (setf (aref depth-fogged-texture 2) (lerp (aref depth-fogged-texture 3)
+;;      ;;                                           0
+;;      ;;                                           0.5))
+;;      ;;height-lit-texture
+;;      ;;(vec4 0.35 0.35 1.0 1.0)
+;;      (vec4
+;;       (lerp 0.7 (aref texture-sample 0) fog-mult)
+;;       (lerp 0.7 (aref texture-sample 1) fog-mult)
+;;       (lerp 1.0 (aref texture-sample 2) fog-mult)
+;;       ;;(lerp 0.0 (aref depth-fogged-texture 3) vis-mult)
+;;       1.0
+;;       ;;0.0
+;;       )
+;;      ;;depth-fogged-texture
+;;      texture-sample
+;;      )))
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
-  (frag-stage :vec2 :int :vec4))
+  (frag-stage :vec2 :int :float :vec4))
 
 (defun now ()
   (float
@@ -147,7 +174,8 @@
 
 (defun load-texture-atlas ()
   (with-paused-rendering
-    (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*))
+    (ignore-errors
+    (try-free-objects *texture-atlas-tex* *texture-atlas-sampler*)))
   (setf *texture-atlas-tex* (or 
                              (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
                              (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
@@ -174,7 +202,7 @@
 (defun step-rendering ()
   (unless *rendering-paused?*
     (ignore-errors (clear))
-    (setf (clear-color) (vec4 0.0 0.45 1.0 1.0))
+    (setf (clear-color) sky-colour)
     (setup-projection-matrix)
     (maphash (lambda (offset chunk)
                (when (eq 'chunk (type-of chunk))

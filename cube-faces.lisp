@@ -9,6 +9,28 @@
 (defparameter *texture-atlas-size* 1)
 (defparameter *texture-cell-size* 16)
 
+(defun face-direction-to-sunlight-mult (face-direction)
+  (float
+   (case face-direction
+     (up 1.0f0)
+     (top 1.0f0)
+
+     (left 0.5f0)
+
+     (right 0.75f0)
+
+     (forward 0.8f0)
+     (front 0.8f0)
+     (ahead 0.8f0)
+
+     (back 0.625f0)
+     (backwards 0.625f0)
+     
+     (down 0.4f0)
+     (bottom 0.4f0)
+     
+     (t 1.0f0))))
+
 (defun resolve-textures ()
   (load-texture-atlas)
   (setup-mesh-table))
@@ -28,68 +50,70 @@
   (+ x (* y cols)))
 
 (defun setup-cube-faces ()
-  (defparameter cube-back 
-    (list
-     (list
-      (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0))
-      (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 1.0 0.0 0.0)  (2d-to-1d 1.0 1.0))
-      (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0)))
-     (list 2 1 0 3 2 0)))
+  (defparameter cube-back
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'front)))
+      (list
+       (list
+        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 0.0)  (2d-to-1d 1.0 1.0) sunlit-mult)
+        (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0) sunlit-mult))
+       (list 2 1 0 3 2 0))))
 
   (defparameter cube-front
-    (list
-     (list
-      (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0))
-      (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0))
-      (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0)))
-     (list 2 1 0 3 2 0)))
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'back)))
+      (list
+       (list
+        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0) sunlit-mult))
+       (list 2 1 0 3 2 0))))
 
   (defparameter cube-left 
-    (list
-     (list
-      (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
-      (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0))
-      (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0)))
-     (list 1 2 0 2 3 0)))
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'left)))
+      (list
+       (list
+        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0) sunlit-mult))
+       (list 1 2 0 2 3 0))))
 
   (defparameter cube-right 
-    (list
-     (list
-      (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
-      (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
-      (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0)))
-     (list 3 2 0 1 3 0)))
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'right)))
+      (list
+       (list
+        (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0) sunlit-mult))
+       (list 3 2 0 1 3 0))))
 
   (defparameter cube-top 
-    (list
-     (list
-      (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0))
-      (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0))
-      (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0)))
-     (list 2 1 0 3 2 0)))
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'top)))
+      (list
+       (list
+        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0) sunlit-mult))
+       (list 2 1 0 3 2 0))))
 
   (defparameter cube-bottom 
-    (list
-     (list
-      (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0))
-      (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0))
-      (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0))
-      (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0)))
-     (list 2 1 0 1 3 0)))
+    (let ((sunlit-mult (face-direction-to-sunlight-mult 'bottom)))
+      (list
+       (list
+        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0) sunlit-mult)
+        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0) sunlit-mult)
+        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0) sunlit-mult))
+       (list 2 1 0 1 3 0))))
 
   (let ((cache (make-hash-table :test #'equal)))
     (defun build-cube-mesh-from-faces (faces)
       (or (gethash faces cache)
           (setf (gethash faces cache) (combine-cube-faces (get-cube-faces faces)))))))
-
-
-
-
 
 (defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (index-offset 0))
   (let ((verts (first cube-mesh))

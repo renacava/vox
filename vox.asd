@@ -30,6 +30,7 @@
                (:file "chunk")
                (:file "meshes")
                (:file "cull-hidden")
+               (:file "sunlight")
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"
