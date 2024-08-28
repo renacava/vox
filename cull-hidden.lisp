@@ -23,27 +23,24 @@
 
 (defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
   (let ((block-array (make-empty-chunk-block-array))
-        (xz-y-table (make-hash-table :test #'equal))
-        ;;(highest-block 0)
-        )  
+        (xz-y-array (make-array (list *chunk-width* *chunk-width*) :initial-element nil)))  
     (loop for position-and-symbol in positions-and-symbols
           do (let* ((x (first position-and-symbol))
                     (y (second position-and-symbol))
                     (z (third position-and-symbol))
-                    (xz (cons x z))
                     (block-symbol (last1 position-and-symbol))
                     (index (3d-to-1d x
                                      y
                                      z))
                     (solid? (get-symbol-mesh-solid-p block-symbol))
-                    (y-entry (when solid? (gethash xz xz-y-table))))
+                    (y-array-entry (aref xz-y-array x z)))
                (if solid?
-                   (if y-entry
-                       (when (> y y-entry)
-                         (setf (gethash xz xz-y-table) y))
-                       (setf (gethash xz xz-y-table) y)))
+                   (if y-array-entry
+                       (when (> y y-array-entry)
+                         (setf (aref xz-y-array x z) y))
+                       (setf (aref xz-y-array x z) y)))
                (setf (aref block-array index) solid?)))
-    (values block-array xz-y-table)))
+    (values block-array xz-y-array)))
 
 (defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)
   (build-cube-mesh-from-faces (remove-if-not #'identity
