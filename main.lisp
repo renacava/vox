@@ -26,10 +26,9 @@
 (defstruct-g block-vert
   (vert :float)
   (uv :float)
-  (sunlit-mult :float)
+  (face-light-float :float)
   (texture-atlas-index :float)
-  (local-offset :float)
-  (sunlit-p :int))
+  (local-offset :float))
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :float))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
@@ -56,6 +55,54 @@
     (vec2 (+ (* row atlas-offset) (* (aref uv 0) atlas-offset))
           (+ (* col atlas-offset) (* (aref uv 1) atlas-offset)))))
 
+(defun-g float-eq ((floata :float) (floatb :float))
+  (let ((tolerance 0.1f0))
+    (and (< floata (+ floatb tolerance))
+         (< (- floatb tolerance) floata))))
+
+(defun-g float-eq-or ((floata :float) (floatb :float) (subsequent :float) (alternative :float))
+  (if (float-eq floata floatb) subsequent alternative))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; FACE-LIGHT-FLOAT TO DIRECTION/LIT CONVERSION
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;
+;;UN-SUNLIT
+;; top     0
+;; left    1
+;; right   2
+;; front   3
+;; back    4
+;; bottom  5
+;;
+;;SUNLIT
+;; top     6
+;; left    7
+;; right   8
+;; front   9
+;; back    10
+;; bottom  11
+
+(defun-g face-light-float-to-multiplier ((face-light-float :float))
+
+  (labels ((fleq ((x :int) (subsequent :float) (alternative :float))
+             (float-eq-or face-light-float x subsequent alternative)))
+    (fleq 0   0.5
+    (fleq 1   0.4
+    (fleq 2   0.35
+    (fleq 3   0.3
+    (fleq 4   0.3
+    (fleq 5   0.25
+    (fleq 6   1.0
+    (fleq 7   0.5
+    (fleq 8   0.75
+    (fleq 9   0.8
+    (fleq 10  0.625
+    (fleq 11  0.4
+              0.0)
+    )))))))))))))
+  
+
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (now :float)
@@ -73,16 +120,17 @@
          (now (* 1.5 now))
          (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
                               )
-                           (+ -50 (sin now))
-                           (+ -420 (* 200 (+ 1 (sin (* 1.5 now))))))))
+                           (+ -36 (* 5 (sin now))
+                              )
+                           (+ -25.1 ;;(* 20 (+ 1 (sin (* 1.5 now))))
+                              ))))
 
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))
          (uv (1d-to-2d (block-vert-uv vert) atlas-size))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
     (values (* proj pos)
             uv
-            (:flat (block-vert-sunlit-p vert))
-            (block-vert-sunlit-mult vert)
+            (block-vert-face-light-float vert)
             pos)))
 
 
@@ -91,14 +139,16 @@
 
 (progn
   (setf sky-colour (vec4 0.0 0.45 1.0 1.0))
-  (defun-g frag-stage ((uv :vec2) (sunlit-p :int) (sunlit-mult :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
+  (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
     (let* ((texture-sample (texture atlas-sampler uv))
-           (is-sunlit (> sunlit-p 0))
+           ;;(is-sunlit (> face-light-float 5))
+           (sunlight-mult (face-light-float-to-multiplier face-light-float))
+           ;;(sunlit-mult 1.0)
            (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
            (fog-colour (vec3 0.7 0.7 1.0)))
-      (setf texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
-      (unless is-sunlit
-        (setf texture-sample (* texture-sample 0.9)))
+      (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
+      ;; (unless is-sunlit
+      ;;   (setf texture-sample (* texture-sample 0.8)))
       (vec4
        (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
        (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
@@ -155,7 +205,7 @@
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
-  (frag-stage :vec2 :int :float :vec4))
+  (frag-stage :vec2 :float :vec4))
 
 (let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 6.0)) 'single-float)))
   (declare (type single-float time-divisor))
