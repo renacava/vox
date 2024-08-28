@@ -101,7 +101,7 @@
           )))))))))))))))))))))))
     (if (> face-light-float 5)
         1.0
-        1.0))))
+        1.1))))
   
 
 (defun-g vert-stage ((vert block-vert)
