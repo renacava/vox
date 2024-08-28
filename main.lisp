@@ -63,44 +63,31 @@
 (defun-g float-eq-or ((floata :float) (floatb :float) (subsequent :float) (alternative :float))
   (if (float-eq floata floatb) subsequent alternative))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; FACE-LIGHT-FLOAT TO DIRECTION/LIT CONVERSION
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;
-;;UN-SUNLIT
-;; top     0
-;; left    1
-;; right   2
-;; front   3
-;; back    4
-;; bottom  5
-;;
-;;SUNLIT
-;; top     6
-;; left    7
-;; right   8
-;; front   9
-;; back    10
-;; bottom  11
-
 (defun-g face-light-float-to-multiplier ((face-light-float :float))
-
   (labels ((fleq ((x :int) (subsequent :float) (alternative :float))
              (float-eq-or face-light-float x subsequent alternative)))
-    (fleq 0   0.5
-    (fleq 1   0.4
-    (fleq 2   0.35
-    (fleq 3   0.3
-    (fleq 4   0.3
-    (fleq 5   0.25
-    (fleq 6   1.0
-    (fleq 7   0.5
-    (fleq 8   0.75
-    (fleq 9   0.8
-    (fleq 10  0.625
-    (fleq 11  0.4
-              0.0)
-    )))))))))))))
+
+    (*
+    (fleq 0   0.41   ;; TOP     UN-SUNLIT
+    (fleq 1   0.42   ;; LEFT    UN-SUNLIT
+    (fleq 2   0.43   ;; RIGHT   UN-SUNLIT
+    (fleq 3   0.37   ;; FRONT   UN-SUNLIT
+    (fleq 4   0.37   ;; BACK    UN-SUNLIT
+    (fleq 5   0.32  ;; BOTTOM  UN-SUNLIT 
+
+    (fleq 6   1.0   ;; TOP     SUNLIT
+    (fleq 7   0.5   ;; LEFT    SUNLIT
+    (fleq 8   0.5   ;; RIGHT   SUNLIT
+    (fleq 9   0.6   ;; FRONT   SUNLIT
+    (fleq 10  0.6   ;; BACK    SUNLIT
+    (fleq 11  0.4   ;; BOTTOM  SUNLIT
+
+              0.0)  ;; DEFAULT 
+          
+          )))))))))))
+    (if (> face-light-float 5)
+        1.0
+        1.0))))
   
 
 (defun-g vert-stage ((vert block-vert)
@@ -120,7 +107,7 @@
          (now (* 1.5 now))
          (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
                               )
-                           (+ -36 (* 5 (sin now))
+                           (+ -36 ;;(* 5 (sin now))
                               )
                            (+ -25.1 ;;(* 20 (+ 1 (sin (* 1.5 now))))
                               ))))
@@ -142,11 +129,14 @@
   (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
     (let* ((texture-sample (texture atlas-sampler uv))
            ;;(is-sunlit (> face-light-float 5))
-           (sunlight-mult (face-light-float-to-multiplier face-light-float))
+           (sunlight-mult (face-light-float-to-multiplier face-light-float)
+             )
            ;;(sunlit-mult 1.0)
            (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
            (fog-colour (vec3 0.7 0.7 1.0)))
       (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
+      ;; (when (not is-sunlit)
+      ;;   (setf texture-sample (* texture-sample 0.7)))
       ;; (unless is-sunlit
       ;;   (setf texture-sample (* texture-sample 0.8)))
       (vec4
