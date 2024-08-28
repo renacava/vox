@@ -156,8 +156,9 @@
 
 (let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 6.0)) 'single-float)))
   (declare (type single-float time-divisor))
-  (defun now ()
-    (/ (get-internal-real-time) time-divisor)))
+  (defparameter *now* (get-internal-real-time))
+  (defun update-now ()
+    (setf *now* (/ (get-internal-real-time) time-divisor))))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -198,32 +199,11 @@
 
 (defun step-rendering ()
   (unless *rendering-paused?*
-    (ignore-errors (clear))
-    (let ((now (now)))
-      (maphash (lambda (offset entry)
-                 (let ((chunk (car entry))
-                       (buffer (cadr entry)))
-                   (when chunk
-                     (unless buffer
-                       (when (and (vert-array chunk) (index-array chunk))
-                         (setf buffer (make-buffer-stream
-                                       (vert-array chunk)
-                                       :index-array (index-array chunk)
-                                       :retain-arrays nil)
-                               (buffer-stream chunk) buffer
-                               (gethash offset *chunks-at-offsets-table*) (list chunk buffer))))
-                     (unless *rendering-paused?*
-                       (map-g #'basic-pipeline buffer
-                              :now now
-                              :proj *projection-matrix*
-                              :offset (offset chunk)
-                              :chunk-width (width chunk)
-                              :chunk-height (height chunk)
-                              :atlas-sampler *texture-atlas-sampler*
-                              :atlas-size *texture-atlas-size*)))))
-               *chunks-at-offsets-table*))
-    
-    
+    (clear)
+    (update-now)
+    (maphash (lambda (offset entry)
+               (render (car entry)))
+             *chunks-at-offsets-table*)
     (step-host)
     (swap)))
 
@@ -245,8 +225,8 @@
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
-                                               (maphash (lambda (offset chunk)
-                                                          (try-free chunk))
+                                               (maphash (lambda (offset entry)
+                                                          (try-free (car entry)))
                                                         *chunks-at-offsets-table*)
                                                (clrhash *chunks-at-offsets-table*)
                                                (setf chunks-queued-to-be-freed? nil)))
@@ -259,20 +239,25 @@
                                                   (height (fourth queued-chunk))
                                                   (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
                                                   (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
-                                                  (chunk (when (and vert-array index-array)
+                                                  (buffer-stream (when (and vert-array index-array)
+                                                                   (make-buffer-stream
+                                                                    vert-array
+                                                                    :index-array index-array
+                                                                    :retain-arrays nil)))
+                                                  (chunk (when buffer-stream
                                                            (make-instance 'chunk
                                                                           :width width
                                                                           :height height
                                                                           :offset offset
                                                                           :vert-array vert-array
                                                                           :index-array index-array
-                                                                          :buffer-stream nil))))
+                                                                          :buffer-stream buffer-stream))))
                                              (try-free-objects (first mesh-data) (second mesh-data))
                                              (if chunk
                                                  (let* ((offset (second queued-chunk))
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free existing-chunk))
-                                                   (setf (gethash offset *chunks-at-offsets-table*) (list chunk nil)))
+                                                   (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
                                                  (try-free-objects vert-array index-array))))))
 
 (defun get-cepl-context-surface-resolution ()
@@ -285,14 +270,14 @@
                                        (step-host)
                                        (livesupport:update-repl-link)
                                        (sleep 0.01))
-                                     (let ((start-time (now)))
+                                     (let ((start-time (update-now)))
                                        (ignore-errors
                                         (setf (resolution (current-viewport))
                                               (get-cepl-context-surface-resolution)))
                                        (step-rendering)
                                        (step-host)
                                        (livesupport:update-repl-link)
-                                       (setf *delta* (- (now) start-time))
+                                       (setf *delta* (- (update-now) start-time))
                                        (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
                                                                         1.0
                                                                         *delta*))))))

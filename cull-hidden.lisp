@@ -12,19 +12,38 @@
 (defun make-empty-chunk-block-array ()
   (make-array *chunk-size* :initial-element nil))
 
+;; make a hash-table where each key:value is `(x z):highets-block-found.
+;; you would need to be doing a bunch of gethash operations... or maybe we could do a 2D array? do the array if performance becomes an issue.
+;; this is happening in various threads so its okay if it isn't the fastest.
+;; anyway.
+;; make a hash table using xz as keys and height as vlaues. then foreach pos-symbol in positinos-and-symbols, grab the value at key, if it exists then check if y is greater than value.
+;; if it IS greater than the current value, set its new value to the current Y value we're looking at.
+;; if it doesn't exist then just set the current value to current y as well, setf gethash.
+;; it it exists but its y > current-y then do nothing.
+
 (defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
   (let ((block-array (make-empty-chunk-block-array))
-        (highest-block 0))  
+        (xz-y-table (make-hash-table :test #'equal))
+        ;;(highest-block 0)
+        )  
     (loop for position-and-symbol in positions-and-symbols
-          do (let ((index (3d-to-1d (first position-and-symbol)
-                                    (second position-and-symbol)
-                                    (third position-and-symbol)))
-                   (solid? (get-symbol-mesh-solid-p (last1 position-and-symbol))))
-               (when (and solid?
-                          (> (second position-and-symbol) highest-block))
-                 (setf highest-block (second position-and-symbol)))
+          do (let* ((x (first position-and-symbol))
+                    (y (second position-and-symbol))
+                    (z (third position-and-symbol))
+                    (xz (cons x z))
+                    (block-symbol (last1 position-and-symbol))
+                    (index (3d-to-1d x
+                                     y
+                                     z))
+                    (solid? (get-symbol-mesh-solid-p block-symbol))
+                    (y-entry (when solid? (gethash xz xz-y-table))))
+               (if solid?
+                   (if y-entry
+                       (when (> y y-entry)
+                         (setf (gethash xz xz-y-table) y))
+                       (setf (gethash xz xz-y-table) y)))
                (setf (aref block-array index) solid?)))
-    block-array))
+    (values block-array xz-y-table)))
 
 (defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)
   (build-cube-mesh-from-faces (remove-if-not #'identity

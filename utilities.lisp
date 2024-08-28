@@ -1599,3 +1599,34 @@ It works because Common Lisp passes everything by value, not by reference, excep
        (result '() (cons (funcall func) result)))
       ((<= count 0) result)
     (declare (type fixnum count))))
+
+(defun hash-table-to-strings (table)
+  (let (result)
+    (maphash (lambda (key value)
+              
+               (push (if (hash-table-p value)
+                         (hash-table-to-string value)
+                         (format nil "~a: ~a" key value))
+                     result
+                     ))
+             table)
+    (nreverse result)))
+
+(defun make-treewalker (func)
+  (labels ((new-func (inner-args)
+             (if (atom inner-args)
+                 (funcall func inner-args)
+                 (mapcar #'new-func inner-args))))
+    #'new-func))
+
+(defun make-hashwalker (func)
+  (labels ((new-func (inner-args)
+             (if (hash-table-p inner-args)
+                 (progn
+                   (maphash (lambda (key value)
+                              (setf (gethash key inner-args)
+                                    (funcall #'new-func value)))
+                            inner-args)
+                   inner-args)
+                 (funcall func inner-args))))
+    #'new-func))

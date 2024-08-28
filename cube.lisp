@@ -7,7 +7,10 @@
   (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
 
 (defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
-  (let ((chunk-block-solidity-array (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
+  (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
+         (chunk-block-solidity-array (first solidity-array-result))
+         (top-blocks-array (second solidity-array-result)))
+    (setq my-top-blocks-array top-blocks-array)
     (combine-cube-faces
      (loop for pos-and-symb in positions-and-symbols
            collect (augment-cube-mesh-with-block-symbol-and-offset (make-cube-faces-from-adjacent-solids

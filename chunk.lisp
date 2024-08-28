@@ -28,6 +28,20 @@
     (try-free-objects buffer-stream index-array vert-array)
     (setf chunk nil)))
 
+(defmethod render ((things-to-render list))
+  (mapcar #'render things-to-render))
+
+(defmethod render ((chunk chunk))
+  (unless *rendering-paused?*
+    (map-g #'basic-pipeline (buffer-stream chunk)
+           :now *now*
+           :proj *projection-matrix*
+           :offset (offset chunk)
+           :chunk-width (width chunk)
+           :chunk-height (height chunk)
+           :atlas-sampler *texture-atlas-sampler*
+           :atlas-size *texture-atlas-size*)))
+
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)
   (setf chunks-queued-to-be-freed? t)
