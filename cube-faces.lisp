@@ -115,10 +115,9 @@
       (or (gethash faces cache)
           (setf (gethash faces cache) (combine-cube-faces (get-cube-faces faces)))))))
 
-(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (index-offset 0))
+(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (highest-block-in-chunk? nil))
   (let ((verts (first cube-mesh))
-        (mesh-instance (get-mesh-bound-to-block-symbol block-symbol))
-        (index-offset (* index-offset )))
+        (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
                 collect (append vert (list (2d-to-1d (getf mesh-instance :atlas-column)
                                                      (getf mesh-instance :atlas-row))
@@ -127,7 +126,7 @@
                                                      (float (second offset))
                                                      (float (third offset)))
                                            
-                                           1)))
+                                           (if highest-block-in-chunk? 1 0))))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)

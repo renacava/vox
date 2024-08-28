@@ -74,7 +74,7 @@
          (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
                               )
                            (+ -50 (sin now))
-                           (+ -500 (* 200 (+ 1 (sin (* 1.5 now))))))))
+                           (+ -700 (* 200(+ 1 (sin (* 1.5 now))))))))
 
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))
          (uv (1d-to-2d (block-vert-uv vert) atlas-size))
@@ -93,13 +93,22 @@
   (setf sky-colour (vec4 0.0 0.45 1.0 1.0))
   (defun-g frag-stage ((uv :vec2) (sunlit-p :int) (sunlit-mult :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
     (let* ((texture-sample (texture atlas-sampler uv))
-           (texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
-          (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01)))))
-     (vec4
-      (lerp 0.7 (aref texture-sample 0) fog-mult)
-      (lerp 0.7 (aref texture-sample 1) fog-mult)
-      (lerp 1.0 (aref texture-sample 2) fog-mult)
-      1.0)))
+           ;;(texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
+           (is-sunlit (> sunlit-p 0))
+           (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01)))))
+
+      (if is-sunlit
+          (progn
+            (setf texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
+            (vec4
+             (lerp 0.7 (aref texture-sample 0) fog-mult)
+             (lerp 0.7 (aref texture-sample 1) fog-mult)
+             (lerp 1.0 (aref texture-sample 2) fog-mult)
+             1.0))
+          (vec4 0.0 0.0 0.0 1.0))
+      
+      
+     ))
  )
 
 

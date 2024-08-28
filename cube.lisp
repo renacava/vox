@@ -10,14 +10,19 @@
   (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
          (chunk-block-solidity-array (first solidity-array-result))
          (top-blocks-array2D (second solidity-array-result)))
-    (setq my-top-blocks-array top-blocks-array2D)
     (combine-cube-faces
      (loop for pos-and-symb in positions-and-symbols
-           collect (augment-cube-mesh-with-block-symbol-and-offset (make-cube-faces-from-adjacent-solids
-                                                                    (coerce (subseq pos-and-symb 0 3) 'vector)
-                                                                    chunk-block-solidity-array)
-                                                                   (last1 pos-and-symb)
-                                                                   (subseq pos-and-symb 0 3))))))
+           collect (let ((x (first pos-and-symb))
+                         (y (second pos-and-symb))
+                         (z (third pos-and-symb))
+                         (block-symbol (last1 pos-and-symb)))
+                     (augment-cube-mesh-with-block-symbol-and-offset
+                      (make-cube-faces-from-adjacent-solids
+                       (vector x y z)
+                       chunk-block-solidity-array)
+                      block-symbol
+                      (list x y z)
+                      (= (aref top-blocks-array2D x z) y)))))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
