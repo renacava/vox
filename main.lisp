@@ -68,23 +68,37 @@
              (float-eq-or face-light-float x subsequent alternative)))
 
     (*
-    (fleq 0   0.41   ;; TOP     UN-SUNLIT
-    (fleq 1   0.42   ;; LEFT    UN-SUNLIT
-    (fleq 2   0.43   ;; RIGHT   UN-SUNLIT
-    (fleq 3   0.37   ;; FRONT   UN-SUNLIT
-    (fleq 4   0.37   ;; BACK    UN-SUNLIT
-    (fleq 5   0.32  ;; BOTTOM  UN-SUNLIT 
+    (fleq 0   0.53   ;; TOP     UN-SUNLIT
+    (fleq 1   0.5   ;; LEFT    UN-SUNLIT
+    (fleq 2   0.5   ;; RIGHT   UN-SUNLIT
+    (fleq 3   0.4   ;; FRONT   UN-SUNLIT
+    (fleq 4   0.4   ;; BACK    UN-SUNLIT
+    (fleq 5   0.32   ;; BOTTOM  UN-SUNLIT 
 
-    (fleq 6   1.0   ;; TOP     SUNLIT
-    (fleq 7   0.5   ;; LEFT    SUNLIT
-    (fleq 8   0.5   ;; RIGHT   SUNLIT
-    (fleq 9   0.6   ;; FRONT   SUNLIT
-    (fleq 10  0.6   ;; BACK    SUNLIT
+    (fleq 6   0.8   ;; TOP     SUNLIT
+    (fleq 7   0.6   ;; LEFT    SUNLIT
+    (fleq 8   0.6   ;; RIGHT   SUNLIT
+    (fleq 9   0.5   ;; FRONT   SUNLIT
+    (fleq 10  0.5   ;; BACK    SUNLIT
     (fleq 11  0.4   ;; BOTTOM  SUNLIT
 
+    (fleq 12  1.0   ;; TOP     SUNLIT
+    (fleq 13  0.7   ;; LEFT    SUNLIT
+    (fleq 14  0.7   ;; RIGHT   SUNLIT
+    (fleq 15  0.6   ;; FRONT   SUNLIT
+    (fleq 16  0.6   ;; BACK    SUNLIT
+    (fleq 17  0.5   ;; BOTTOM  SUNLIT
+
+    (fleq 18  1.0   ;; TOP     SUNLIT
+    (fleq 19  0.85   ;; LEFT    SUNLIT
+    (fleq 20  0.85   ;; RIGHT   SUNLIT
+    (fleq 21  0.7   ;; FRONT   SUNLIT
+    (fleq 22  0.7   ;; BACK    SUNLIT
+    (fleq 23  0.6   ;; BOTTOM  SUNLIT
+          
               0.0)  ;; DEFAULT 
           
-          )))))))))))
+          )))))))))))))))))))))))
     (if (> face-light-float 5)
         1.0
         1.0))))
@@ -107,9 +121,9 @@
          (now (* 1.5 now))
          (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
                               )
-                           (+ -36 ;;(* 5 (sin now))
+                           (+ -38.13 ;;(* 5 (sin now))
                               )
-                           (+ -25.1 ;;(* 20 (+ 1 (sin (* 1.5 now))))
+                           (+ -33 ;;(* 20 (+ 1 (sin (* 1.5 now))))
                               ))))
 
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))

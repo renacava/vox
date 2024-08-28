@@ -115,13 +115,27 @@
       (or (gethash faces cache)
           (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))))
 
-(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (highest-block-in-chunk? nil))
+(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))
         (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
                 collect (let* ((pos-and-uv (subseq vert 0 2))
                                (face-float (third vert))
-                               (face-float (if highest-block-in-chunk? (+ 6f0 face-float) face-float)))
+                               (face-float
+                                 (+ face-float
+                                    (case distance-from-top-block
+                                      (0 18f0)
+                                      (1 12f0)
+                                      (2 12f0)
+                                      (3 12f0)
+                                      (4 12f0)
+                                      (5 6f0)
+                                      (6 6f0)
+                                      (6 6f0)
+                                      (t 0f0)))
+                                 
+                                 ;;(if highest-block-in-chunk? (+ 6f0 face-float) face-float)
+                                 ))
                           (append pos-and-uv
                                   (list
                                    face-float

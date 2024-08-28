@@ -22,7 +22,9 @@
                        chunk-block-solidity-array)
                       block-symbol
                       (list x y z)
-                      (= (aref top-blocks-array2D x z) y)))))))
+                      (- (aref top-blocks-array2D x z) y)
+                      ;;(= (aref top-blocks-array2D x z) y)
+                      ))))))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
