@@ -92,8 +92,8 @@
     (fleq 18  1.0   ;; TOP     SUNLIT
     (fleq 19  0.85   ;; LEFT    SUNLIT
     (fleq 20  0.85   ;; RIGHT   SUNLIT
-    (fleq 21  0.7   ;; FRONT   SUNLIT
-    (fleq 22  0.7   ;; BACK    SUNLIT
+    (fleq 21  0.75   ;; FRONT   SUNLIT
+    (fleq 22  0.75   ;; BACK    SUNLIT
     (fleq 23  0.6   ;; BOTTOM  SUNLIT
           
               0.0)  ;; DEFAULT 
