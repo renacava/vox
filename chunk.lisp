@@ -55,6 +55,7 @@
              do (ignore-errors
                  (lparallel:pmapcar (lambda (offset)
                                       (make-chunk offset
+                                                  ;;(vws:make-random-chunk-blocks3d offset)
                                                   (vox-world-sample:make-random-chunk-blocks offset)
                                                   ;;(vox-world-sample:make-slicey-chunk offset)
                                                   width
