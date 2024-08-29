@@ -3,6 +3,8 @@
 (defparameter *projection-matrix* nil)
 (defparameter *rendering-paused?* nil)
 
+
+
 (defmacro with-paused-rendering (&body body)
   `(let ((prior-state *rendering-paused?*))
      (setf *rendering-paused?* t)
@@ -102,7 +104,14 @@
     (if (> face-light-float 5)
         1.0
         1.1))))
+
+(defun-g my-cool-perlin-noise ((x :float))
+  (nineveh:perlin-noise (vec2 x x)))
   
+(defun-g muller ((x :float) (y :float))
+  (*
+   (sqrt (* -2 (log x)))
+   (cos (float (* 2 pi y)))))
 
 (defun-g vert-stage ((vert block-vert)
                      &uniform
@@ -119,11 +128,11 @@
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
          (now (* 1.5 now))
-         (pos (+ pos (vec4 (+ -256 ;;(* -256 (sin (* 0.25 now)))
+         (pos (+ pos (vec4 (+ -256 (* -100 (sin (* 0.1 now)))
                               )
-                           (+ -38.13 ;;(* 5 (sin now))
+                           (+ -48 ;;(* 20 (sin now))
                               )
-                           (+ -33 ;;(* 20 (+ 1 (sin (* 1.5 now))))
+                           (+ -540 ;;(* 25 (+ 1 (sin (* 2.0 now))))
                               ))))
 
          (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))
@@ -136,76 +145,184 @@
 
 
 
+
+
+(defparameter *sky-colours* (list
+                             (list (/ 0 24) (vec3 0.02 0.0 0.05)) ;; midnight
+                             (list (/ 2 24) (vec3 0.03 0.03 0.1)) ;; night
+                             (list (/ 4 24) (vec3 0.5 0.3 0.2)) ;; dawn
+                             (list (/ 7 24) (vec3 0.3 0.55 1.0)) ;; morning
+                             (list (/ 12 24) (vec3 0.3 0.55 1.0)) ;; noon
+                             (list (/ 16 24) (vec3 0.3 0.3 1.0)) ;; afternoon
+                             (list (/ 17 24) (vec3 0.7 0.5 0.4)) ;; dusk
+                             (list (/ 19 24) (vec3 0.3 0.2 0.35)) ;; twilight
+                             (list (/ 21 24) (vec3 0.03 0.03 0.1)) ;; night
+                             (list (/ 24 24) (vec3 0.02 0.0 0.05)) ;; midnight
+                             ))
 (defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
 
 (progn
   (setf sky-colour (vec4 0.0 0.45 1.0 1.0))
-  (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
+  (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d) (skylight-colour :vec3) (sky-colour :vec4))
     (let* ((texture-sample (texture atlas-sampler uv))
-           ;;(is-sunlit (> face-light-float 5))
-           (sunlight-mult (face-light-float-to-multiplier face-light-float)
-             )
-           ;;(sunlit-mult 1.0)
+           (sunlight-mult (face-light-float-to-multiplier face-light-float))
            (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
-           (fog-colour (vec3 0.7 0.7 1.0)))
+           (fog-colour (* skylight-colour 0.8)))
+
       (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
-      ;; (when (not is-sunlit)
-      ;;   (setf texture-sample (* texture-sample 0.7)))
-      ;; (unless is-sunlit
-      ;;   (setf texture-sample (* texture-sample 0.8)))
+
+      (setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
+      
       (vec4
        (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
        (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
        (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-       1.0))))
+       1.0)
+      
+      )))
+
+(defun-g star-vert ((vert :vec3)
+                    &uniform
+                    (now :float)
+                    (proj :mat4))
+  (let* ((vert (vec4 vert 1.0)))
+    (values vert vert)))
+
+(defun-g star-frag ((pos :vec4) &uniform (now :float) (sky-colour :vec4))
+  (let* ((sky-brightness (max (aref sky-colour 0)
+                              (aref sky-colour 1)
+                              (aref sky-colour 2)))
+         (pos (vec4 (+ (aref pos 0) (* 0.00075 now)
+                       )
+                    (+ (aref pos 1) (* 0.00075 now)
+                       )
+                    (aref pos 2)
+                    (aref pos 3)))
+         (perlin1 (nineveh:cellular-noise-fast (* 4 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
+                                                          ))))
+         (perlin1 (min 1.0 (max 0.0 (* perlin1 0.1))))
+         (star1 (nineveh:stars-noise (* 90 (vec2 (aref pos 0) (aref pos 1)))
+                                    0.5 0.0 20))
+         (star1 (* (vec4 star1 star1 star1 1.0) perlin1))
+         (star1 (vec4 (* (aref star1 0) (+ 0.9 (mod (aref pos 0) 0.1)))
+                      (* (aref star1 1) (+ 0.9 (mod (aref pos 1) 0.1)))
+                      (* (aref star1 2) (+ 0.9 (mod (aref pos 2) 0.1)))
+                      1.0))
+         (star1 (* star1 30))
+         
+         (star1 (* star1 (- 1 sky-brightness)))
+
+
+         
+         ;; (perlin2 (nineveh:perlin-noise (* 3 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
+         ;;                                                   ))))
+         ;; (perlin2 (min 1.0 (max 0.0 (* perlin2 1.0))))
+         ;; (star2 (nineveh:stars-noise (* 30 (vec2 (aref pos 0) (aref pos 1)))
+         ;;                             0.3 0.0 30))
+         ;; (star2 (* (vec4 star2 star2 star2 1.0) perlin2))
+         ;; (star2 (vec4 (* (aref star2 0) (+ 0.7 (mod (aref pos 0) 0.3)))
+         ;;              (* (aref star2 1) (+ 0.7 (mod (aref pos 1) 0.3)))
+         ;;              (* (aref star2 2) (+ 0.7 (mod (aref pos 2) 0.3)))
+         ;;              1.0))
+         ;; (star2 (* star2 30))
+         
+         ;; (star2 (* star2 (- 1 sky-brightness)))
 
 
 
+         (perlin3 (nineveh:perlin-noise (* 4 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
+                                                   ))))
+         (perlin3 (min 1.0 (max 0.0 (* perlin3 1.0))))
+         (star3 (nineveh:stars-noise (* 60 (vec2 (aref pos 0) (aref pos 1)))
+                                     0.01 0.0 15))
+         (star3 (* (vec4 star3 star3 star3 1.0) perlin3))
+         (star3 (vec4 (* (aref star3 0) (+ 0.7 (mod (aref pos 0) 0.3)))
+                      (* (aref star3 1) (+ 0.4 (mod (aref pos 1) 0.1)))
+                      (* (aref star3 2) (+ 0.5 (mod (aref pos 2) 0.5)))
+                      1.0))
+         (star3 (* star3 5))
+         
+         (star3 (* star3 (- 1 sky-brightness)))
+
+
+         (perlin4 (nineveh:perlin-noise (* 7.5 (vec2 (aref pos 0) (sin (* 0.00001 now))))))
+         ;;(perlin4 (min 1.0 (max 0.0 (* perlin4 1.0))))
+         (star4 (nineveh:stars-noise (* 200 (vec2 (aref pos 0) (aref pos 1)))
+                                     1.0 0.0 13))
+         (star4 (* (vec4 star4 star4 star4 1.0) perlin4))
+         (star4 (vec4 (* (aref star4 0) (+ 0.8 (mod (aref pos 0) 0.2)))
+                      (* (aref star4 1) (+ 0.8 (mod (aref pos 1) 0.2)))
+                      (* (aref star4 2) (+ 0.8 (mod (aref pos 2) 0.2)))
+                      1.0))
+         (star4 (* star4 2))
+         
+         (star4 (* star4 (- 1 sky-brightness)))
+         
+         )
+    
+    (+ sky-colour
+       star1
+       ;;star2
+       star3
+       star4
+       )
+    ;;star
+    ))
+
+(defpipeline-g star-pipeline ()
+  (star-vert :vec3)
+  (star-frag :vec4))
 
 
 
+(let (sky-buffer)
+  (defparameter my-cool-rect (list
+                              (make-c-array
+                               (list (vec4 -1.0 -1.0 0.0 1.0)
+                                     (vec4 1.0 -1.0 0.0 1.0)
+                                     (vec4 1.0 1.0 0.0 1.0)
+                                     (vec4 -1.0 1.0 0.0 1.0)))
+                              (make-c-array
+                               (list 0 1 2 2 3 0) :element-type :uint)))
 
+  (defun render-night-sky ()
+    (unless sky-buffer
+      (setf sky-buffer (make-buffer-stream (make-gpu-array (first my-cool-rect)) :index-array (make-gpu-array (second my-cool-rect)))))
+    (map-g #'star-pipeline sky-buffer
+           :now *now*
+           :sky-colour sky-colour)))
 
+(defun lerp-vec3 (v1 v2 delta)
+  (vec3 (lerp (aref v1 0) (aref v2 0) delta)
+        (lerp (aref v1 1) (aref v2 1) delta)
+        (lerp (aref v1 2) (aref v2 2) delta)))
 
+(defun lerp-vec3-between-numbers (v1 v2 current-number lower-number higher-number)
+  (lerp-vec3 v1 v2 (delta-between lower-number higher-number current-number)))
 
+(defun get-bounds-from-numbers (number numbers)
+  "Returns the two numbers adjacent to number in the given sorted list of numbers."
+  (loop for number-index below (1- (length numbers))
+        do (let ((lower (elt numbers number-index))
+                 (higher (elt numbers (1+ number-index))))
+             (when (<= lower number higher)
+               (return-from get-bounds-from-numbers
+                 (list lower higher number-index (1+ number-index)))))))
 
+(defun delta-between-numbers (number numbers)
+  (let ((bounds (get-bounds-from-numbers number numbers)))
+    (list (delta-between (first bounds) (second bounds) number)
+          (third bounds)
+          (fourth bounds))))
 
-;; (progn
-  
-;;   ;;(setf sky-colour (vec4 0.0 0.45 1.0 1.0))
-;;   (setf sky-colour (vec4 0.0 0.0 0.0 1.0))
-;;   (defun-g frag-stage ((uv :vec2) (sunlit-p :int) (sunlit-mult :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d))
-;;    (let* ((sunlight-mult (if (> sunlit-p 0)
-;;                              1.0
-;;                              0.5))
-;;           (texture-sample (texture atlas-sampler uv))
-;;           ;;(sunlit-texture (* texture-sample sunlight-mult))
-;;           ;;(height-lit-texture (* sunlit-texture (min (max 0 (- -0.2 (/ 24 (aref pos 1)))) 1)))
-;;           ;; (depth-fogged-texture texture-sample;;height-lit-texture
-;;           ;;   )
-;;           (texture-sample (* texture-sample 0.7))
-;;           ;;(texture-sample (* texture-sample (vec4 sunlit-mult sunlit-mult sunlit-mult 1.0)))
-;;           (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
-;;           ;;(vis-mult (min 1 (/ 1 (* (aref pos 2) -0.005))))
-;;           )
-;;      ;; (setf (aref depth-fogged-texture 3)
-;;      ;;       0.5)
-;;      ;; (setf (aref depth-fogged-texture 2) (lerp (aref depth-fogged-texture 3)
-;;      ;;                                           0
-;;      ;;                                           0.5))
-;;      ;;height-lit-texture
-;;      ;;(vec4 0.35 0.35 1.0 1.0)
-;;      (vec4
-;;       (lerp 0.7 (aref texture-sample 0) fog-mult)
-;;       (lerp 0.7 (aref texture-sample 1) fog-mult)
-;;       (lerp 1.0 (aref texture-sample 2) fog-mult)
-;;       ;;(lerp 0.0 (aref depth-fogged-texture 3) vis-mult)
-;;       1.0
-;;       ;;0.0
-;;       )
-;;      ;;depth-fogged-texture
-;;      texture-sample
-;;      )))
+(defun lerp-vec3s (number number-vec3-pairs)
+  (let ((delta-and-indices (delta-between-numbers number (mapcar #'first number-vec3-pairs))))
+    (lerp-vec3 (second (elt number-vec3-pairs (second delta-and-indices)))
+               (second (elt number-vec3-pairs (third delta-and-indices)))
+               (first delta-and-indices))))
+
+(defun delta-between (lower-bound upper-bound number)
+  (float (change-range number lower-bound upper-bound 0 1)))
 
 (defpipeline-g basic-pipeline ()
   (vert-stage block-vert)
@@ -215,7 +332,18 @@
   (declare (type single-float time-divisor))
   (defparameter *now* (get-internal-real-time))
   (defun update-now ()
-    (setf *now* (/ (get-internal-real-time) time-divisor))))
+    (setf *now* (/ (get-internal-real-time) time-divisor))
+    (let ((sky-col (lerp-vec3s (change-range (sin (* 0.2 *now*)) -1 1 0 1) *sky-colours*)))
+      (setf sky-colour
+            (vec4 (aref sky-col 0)
+                  (aref sky-col 1)
+                  (aref sky-col 2)
+                  1.0)))
+
+
+    
+    *now*
+    ))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -244,7 +372,6 @@
   (setf (surface-title (current-surface)) "vox")
   (with-paused-rendering
     (resolve-textures))
-  (setf (clear-color) sky-colour)
   (setup-projection-matrix)
   ;;(load-texture-atlas)
   (make-chunks radius-x width *chunk-height* radius-z))
@@ -256,12 +383,20 @@
 
 (defun step-rendering ()
   (unless *rendering-paused?*
+    (setf (clear-color) sky-colour)
     (clear)
     (update-now)
     (setup-projection-matrix)
-    (maphash (lambda (offset entry)
-               (render (car entry)))
-             *chunks-at-offsets-table*)
+    (with-blending (make-blending-params)
+      (gl:disable :depth-test)
+      (render-night-sky)
+      (gl:enable :depth-test)
+      (maphash (lambda (offset entry)
+                 (render (car entry)))
+               *chunks-at-offsets-table*)
+      ;;(clear)
+      )
+    
     (step-host)
     (swap)))
 

@@ -33,14 +33,26 @@
 
 (defmethod render ((chunk chunk))
   (unless *rendering-paused?*
-    (map-g #'basic-pipeline (buffer-stream chunk)
-           :now *now*
-           :proj *projection-matrix*
-           :offset (offset chunk)
-           :chunk-width (width chunk)
-           :chunk-height (height chunk)
-           :atlas-sampler *texture-atlas-sampler*
-           :atlas-size *texture-atlas-size*)))
+    (let ((light-level (max (aref sky-colour 0)
+                            (aref sky-colour 1)
+                            (aref sky-colour 2)
+                            0.1)))
+      (map-g #'basic-pipeline (buffer-stream chunk)
+             :now *now*
+             :proj *projection-matrix*
+             :offset (offset chunk)
+             :chunk-width (width chunk)
+             :chunk-height (height chunk)
+             :atlas-sampler *texture-atlas-sampler*
+             :atlas-size *texture-atlas-size*
+             :skylight-colour (lerp-vec3
+                               (vec3 (aref sky-colour 0)
+                                     (aref sky-colour 1)
+                                     (aref sky-colour 2))
+                               (vec3 light-level light-level light-level)
+                               0.9)
+             :sky-colour sky-colour))
+    ))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)
@@ -56,7 +68,8 @@
                  (lparallel:pmapcar (lambda (offset)
                                       (make-chunk offset
                                                   ;;(vws:make-random-chunk-blocks3d offset)
-                                                  (vox-world-sample:make-random-chunk-blocks offset)
+                                                  (vox-world-sample:make-random-chunk-blocks2d offset)
+                                                  ;;(vox-world-sample::make-random-chunk-blocks-caved offset)
                                                   ;;(vox-world-sample:make-slicey-chunk offset)
                                                   width
                                                   height))

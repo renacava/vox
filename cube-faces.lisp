@@ -131,7 +131,8 @@
                                       (4 12f0)
                                       (5 6f0)
                                       (6 6f0)
-                                      (6 6f0)
+                                      (7 6f0)
+                                      (8 6f0)
                                       (t 0f0)))
                                  
                                  ;;(if highest-block-in-chunk? (+ 6f0 face-float) face-float)
