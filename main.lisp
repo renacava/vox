@@ -198,11 +198,11 @@
                        )
                     (aref pos 2)
                     (aref pos 3)))
-         (perlin1 (nineveh:cellular-noise-fast (* 4 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
+         (perlin1 (nineveh:cellular-noise-fast (* 1 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
                                                           ))))
-         (perlin1 (min 1.0 (max 0.0 (* perlin1 0.1))))
-         (star1 (nineveh:stars-noise (* 90 (vec2 (aref pos 0) (aref pos 1)))
-                                    0.5 0.0 20))
+         (perlin1 (min 1.0 (max 0.0 (* perlin1 0.2))))
+         (star1 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
+                                     0.05 0.0 30))
          (star1 (* (vec4 star1 star1 star1 1.0) perlin1))
          (star1 (vec4 (* (aref star1 0) (+ 0.9 (mod (aref pos 0) 0.1)))
                       (* (aref star1 1) (+ 0.9 (mod (aref pos 1) 0.1)))
@@ -262,7 +262,6 @@
     
     (+ sky-colour
        star1
-       ;;star2
        star3
        star4
        )
