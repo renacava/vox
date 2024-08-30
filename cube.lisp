@@ -1,11 +1,5 @@
 (in-package #:vox)
 
-(defun make-ivec2 (x y)
-  (make-array 2 :element-type `(signed-byte 32) :initial-contents (vector x y)))
-
-(defun make-ivec3 (x y z)
-  (make-array 3 :element-type `(signed-byte 32) :initial-contents (vector x y z)))
-
 (defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
   (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
          (chunk-block-solidity-array (first solidity-array-result))

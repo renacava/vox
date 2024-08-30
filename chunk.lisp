@@ -1,5 +1,11 @@
 (in-package #:vox)
 
+(defparameter queued-chunks nil)
+(defparameter chunk-queue-max-size 16)
+(defparameter half-baked-chunks nil)
+(defparameter chunks-queued-to-be-freed? nil)
+(defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
+
 (defclass chunk ()
   ((buffer-stream :initarg :buffer-stream
                   :accessor buffer-stream
@@ -51,8 +57,12 @@
                                      (aref sky-colour 2))
                                (vec3 light-level light-level light-level)
                                0.9)
-             :sky-colour sky-colour))
-    ))
+             :sky-colour sky-colour))))
+
+(defun render-chunks ()
+  (maphash (lambda (offset entry)
+             (render (car entry)))
+           *chunks-at-offsets-table*))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)
@@ -92,3 +102,9 @@
   (combine-blocks-verts-and-indices
    (make-blocks-verts-and-indices-from-positions-and-symbols
     (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols))))
+
+(defun queue-full? ()
+  (< chunk-queue-max-size (length queued-chunks)))
+
+(defun queue-chunk (mesh-data offset width height)
+  (push (list mesh-data offset width height) queued-chunks))

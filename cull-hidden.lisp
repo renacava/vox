@@ -12,15 +12,6 @@
 (defun make-empty-chunk-block-array ()
   (make-array *chunk-size* :initial-element nil))
 
-;; make a hash-table where each key:value is `(x z):highets-block-found.
-;; you would need to be doing a bunch of gethash operations... or maybe we could do a 2D array? do the array if performance becomes an issue.
-;; this is happening in various threads so its okay if it isn't the fastest.
-;; anyway.
-;; make a hash table using xz as keys and height as vlaues. then foreach pos-symbol in positinos-and-symbols, grab the value at key, if it exists then check if y is greater than value.
-;; if it IS greater than the current value, set its new value to the current Y value we're looking at.
-;; if it doesn't exist then just set the current value to current y as well, setf gethash.
-;; it it exists but its y > current-y then do nothing.
-
 (defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
   (let ((block-array (make-empty-chunk-block-array))
         (xz-y-array (make-array (list *chunk-width* *chunk-width*) :initial-element nil)))  
@@ -29,9 +20,9 @@
                     (y (second position-and-symbol))
                     (z (third position-and-symbol))
                     (block-symbol (last1 position-and-symbol))
-                    (index (3d-to-1d x
-                                     y
-                                     z))
+                    (index (truncate (3d-to-1d x
+                                      y
+                                      z)))
                     (solid? (get-symbol-mesh-solid-p block-symbol))
                     (y-array-entry (aref xz-y-array x z)))
                (if solid?
@@ -89,7 +80,7 @@
     (and (< -1 x *chunk-width*)
          (< -1 y *chunk-height*)
          (< -1 z *chunk-width*)
-         (aref chunk-block-array (3d-to-1d x y z)))))
+         (aref chunk-block-array (truncate (3d-to-1d x y z))))))
 
 (defun solid-above-p (pos chunk-block-array)
   (pos-solid (pos-above pos) chunk-block-array))
