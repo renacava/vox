@@ -3,8 +3,6 @@
 (defparameter *projection-matrix* nil)
 (defparameter *rendering-paused?* nil)
 
-
-
 (defmacro with-paused-rendering (&body body)
   `(let ((prior-state *rendering-paused?*))
      (setf *rendering-paused?* t)
@@ -25,10 +23,15 @@
 (defun try-free-objects (&rest objects)
   (mapcar #'try-free objects))
 
+;; (defstruct-g block-vert
+;;   (vert :float)
+;;   (uv :float)
+;;   (face-light-float :float)
+;;   (texture-atlas-index :float)
+;;   (local-offset :float))
+
 (defstruct-g block-vert
-  (vert :float)
-  (uv :float)
-  (face-light-float :float)
+  (vert-data :float)
   (texture-atlas-index :float)
   (local-offset :float))
 
@@ -105,6 +108,35 @@
         1.0
         1.1))))
 
+;; (defun-g decode-vert-data ((vert-data :float))
+;;   (let* ((vert (- vert-data 1000000000))
+;;          (pos (/ vert 100000000))
+;;          (vert (- vert (* pos 100000000)))
+;;          (uv (/ vert 10000000))
+;;          (vert (- vert (* uv 10000000)))
+;;          (face-float (/ vert 100000))
+;;          (vert (- vert (* face-float 100000)))
+;;          (texture-atlas-index vert))
+;;     (vec4 (float pos)
+;;           (float uv)
+;;           (float face-float)
+;;           (float texture-atlas-index))))
+
+(defun-g decode-vert-data ((vert-data :float))
+  (let* ((vert-data (round vert-data))
+         (vert (- vert-data 10000))
+         (pos (round (/ vert 1000)))
+         (vert (- vert (* pos 1000)))
+         (uv (round (/ vert 100)))
+         (vert (- vert (* uv 100)))
+         (face-float (float vert))
+         )
+    (vec3 pos
+          uv
+          face-float
+          ;;:texture-atlas-index texture-atlas-index
+          )))
+
 (defun-g my-cool-perlin-noise ((x :float))
   (nineveh:perlin-noise (vec2 x x)))
   
@@ -121,26 +153,40 @@
                      (chunk-width :int)
                      (chunk-height :int)
                      (atlas-size :float))
-  (let* ((pos (1d-to-3d (block-vert-vert vert) chunk-width chunk-height))
+  (let* ((vert-data (block-vert-vert-data vert))
+         (vert-data (decode-vert-data vert-data))
+         (pos (aref vert-data 0))
+         (uv (aref vert-data 1))
+         (face-light-float (aref vert-data 2))
+         (texture-atlas-index (block-vert-texture-atlas-index vert))
+         
+         (pos (1d-to-3d pos 2.0 2.0))
          (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-height)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
          (now (* 1.5 now))
-         (pos (+ pos (vec4 (+ -256 (* -100 (sin (* 0.1 now)))
-                              )
-                           (+ -48 ;;(* 20 (sin now))
-                              )
-                           (+ -540 ;;(* 25 (+ 1 (sin (* 2.0 now))))
-                              ))))
+         (pos (+ pos
+                 (vec4 (+ -256 (* -100 (sin (* 0.25 now))))
+                       (+ -34 ;;(* 20 (sin now))
+                          )
+                       (+ -520 ;;(* 25 (+ 1 (sin (* 2.0 now))))
+                          ))
+                 ;; (vec4
+                 ;;  (+ -100 (sin (* 2 now)))
+                 ;;  -32
+                 ;;  -15)
+                 ;;(vec4 -36 -32 -100 1)
+                 ))
 
-         (atlas-coords (1d-to-2d (block-vert-texture-atlas-index vert) atlas-size))
-         (uv (1d-to-2d (block-vert-uv vert) atlas-size))
+         (atlas-coords (1d-to-2d texture-atlas-index 256))
+         (uv (1d-to-2d uv 2.0))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
     (values (* proj pos)
             uv
-            (block-vert-face-light-float vert)
+            ;;(1d-to-2d face-light-float)
+            face-light-float
             pos)))
 
 
@@ -148,16 +194,24 @@
 
 
 (defparameter *sky-colours* (list
-                             (list (/ 0 24) (vec3 0.02 0.0 0.05)) ;; midnight
-                             (list (/ 2 24) (vec3 0.03 0.03 0.1)) ;; night
-                             (list (/ 4 24) (vec3 0.5 0.3 0.2)) ;; dawn
-                             (list (/ 7 24) (vec3 0.3 0.55 1.0)) ;; morning
-                             (list (/ 12 24) (vec3 0.3 0.55 1.0)) ;; noon
-                             (list (/ 16 24) (vec3 0.3 0.3 1.0)) ;; afternoon
-                             (list (/ 17 24) (vec3 0.7 0.5 0.4)) ;; dusk
-                             (list (/ 19 24) (vec3 0.3 0.2 0.35)) ;; twilight
-                             (list (/ 21 24) (vec3 0.03 0.03 0.1)) ;; night
-                             (list (/ 24 24) (vec3 0.02 0.0 0.05)) ;; midnight
+                             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                             ;; alway day
+                             (list 0 (vec3 0.3 0.55 1.0))
+                             (list 0.5 (vec3 0.3 0.3 1.0))
+                             (list 1 (vec3 0.3 0.55 1.0))
+
+                             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+                             ;; actual daytime colours
+                             ;;(list (/ 0 24) (vec3 0.02 0.0 0.05)) ;; midnight
+                             ;;(list (/ 2 24) (vec3 0.03 0.03 0.1)) ;; night
+                             ;;(list (/ 4 24) (vec3 0.5 0.3 0.2)) ;; dawn
+                             ;;(list (/ 7 24) (vec3 0.3 0.55 1.0)) ;; morning
+                             ;;(list (/ 12 24) (vec3 0.3 0.55 1.0)) ;; noon
+                             ;;(list (/ 16 24) (vec3 0.3 0.3 1.0)) ;; afternoon
+                             ;;(list (/ 17 24) (vec3 0.7 0.5 0.4)) ;; dusk
+                             ;;(list (/ 19 24) (vec3 0.3 0.2 0.35)) ;; twilight
+                             ;;(list (/ 21 24) (vec3 0.03 0.03 0.1)) ;; night
+                             ;;(list (/ 24 24) (vec3 0.02 0.0 0.05)) ;; midnight
                              ))
 (defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
 
@@ -188,6 +242,18 @@
   (let* ((vert (vec4 vert 1.0)))
     (values vert vert)))
 
+(defun-g min-vec4 ((invec4 :vec4) (min-value :float))
+  (vec4 (min (aref invec4 0) min-value)
+        (min (aref invec4 1) min-value)
+        (min (aref invec4 2) min-value)
+        1.0))
+
+(defun-g max-vec4 ((invec4 :vec4) (min-value :float))
+  (vec4 (max (aref invec4 0) min-value)
+        (max (aref invec4 1) min-value)
+        (max (aref invec4 2) min-value)
+        1.0))
+
 (defun-g star-frag ((pos :vec4) &uniform (now :float) (sky-colour :vec4))
   (let* ((sky-brightness (max (aref sky-colour 0)
                               (aref sky-colour 1)
@@ -198,17 +264,17 @@
                        )
                     (aref pos 2)
                     (aref pos 3)))
-         (perlin1 (nineveh:cellular-noise-fast (* 1 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
+         (perlin1 (nineveh:cellular-noise-fast (* 10 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
                                                           ))))
-         (perlin1 (min 1.0 (max 0.0 (* perlin1 0.2))))
+         (perlin1 (min 1.0 (max 0.0 (* perlin1 2))))
          (star1 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
-                                     0.05 0.0 30))
+                                     0.9 0.0 20))
          (star1 (* (vec4 star1 star1 star1 1.0) perlin1))
          (star1 (vec4 (* (aref star1 0) (+ 0.9 (mod (aref pos 0) 0.1)))
                       (* (aref star1 1) (+ 0.9 (mod (aref pos 1) 0.1)))
                       (* (aref star1 2) (+ 0.9 (mod (aref pos 2) 0.1)))
                       1.0))
-         (star1 (* star1 30))
+         (star1 (* star1 1.0))
          
          (star1 (* star1 (- 1 sky-brightness)))
 
@@ -230,42 +296,44 @@
 
 
 
-         (perlin3 (nineveh:perlin-noise (* 4 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
+         (perlin3 (nineveh:perlin-noise (* 1 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
                                                    ))))
          (perlin3 (min 1.0 (max 0.0 (* perlin3 1.0))))
-         (star3 (nineveh:stars-noise (* 60 (vec2 (aref pos 0) (aref pos 1)))
-                                     0.01 0.0 15))
+         (star3 (nineveh:stars-noise (* 80 (vec2 (aref pos 0) (aref pos 1)))
+                                     0.005 0.0 15))
          (star3 (* (vec4 star3 star3 star3 1.0) perlin3))
          (star3 (vec4 (* (aref star3 0) (+ 0.7 (mod (aref pos 0) 0.3)))
                       (* (aref star3 1) (+ 0.4 (mod (aref pos 1) 0.1)))
                       (* (aref star3 2) (+ 0.5 (mod (aref pos 2) 0.5)))
                       1.0))
-         (star3 (* star3 5))
+         (star3 (* star3 2))
          
          (star3 (* star3 (- 1 sky-brightness)))
 
 
-         (perlin4 (nineveh:perlin-noise (* 7.5 (vec2 (aref pos 0) (sin (* 0.00001 now))))))
+         (perlin4 (nineveh:perlin-noise (* 10.5 (vec2 (aref pos 0) (sin (* 0.00001 now))))))
          ;;(perlin4 (min 1.0 (max 0.0 (* perlin4 1.0))))
-         (star4 (nineveh:stars-noise (* 200 (vec2 (aref pos 0) (aref pos 1)))
-                                     1.0 0.0 13))
+         (star4 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
+                                     1.0 0.0 16))
          (star4 (* (vec4 star4 star4 star4 1.0) perlin4))
          (star4 (vec4 (* (aref star4 0) (+ 0.8 (mod (aref pos 0) 0.2)))
                       (* (aref star4 1) (+ 0.8 (mod (aref pos 1) 0.2)))
                       (* (aref star4 2) (+ 0.8 (mod (aref pos 2) 0.2)))
                       1.0))
-         (star4 (* star4 2))
+         (star4 (* star4 1))
          
          (star4 (* star4 (- 1 sky-brightness)))
          
-         )
+         (star1 (max-vec4 (min-vec4 star1 1.0) 0.0))
+         (star3 (max-vec4 (min-vec4 star3 1.0) 0.0))
+         (star4 (max-vec4 (min-vec4 star4 1.0) 0.0)))
+    
     
     (+ sky-colour
        star1
        star3
        star4
        )
-    ;;star
     ))
 
 (defpipeline-g star-pipeline ()

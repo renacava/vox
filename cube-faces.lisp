@@ -54,60 +54,60 @@
     (let ((face-float (face-direction-to-float 'front)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 1.0) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 1.0 0.0 0.0)  (2d-to-1d 1.0 1.0) face-float)
-        (list (3d-to-1d 1.0 1.0 0.0)  (2d-to-1d 1.0 0.0) face-float))
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 1.0 0.0 2) face-float))
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-front
     (let ((face-float (face-direction-to-float 'back)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 0.0) face-float)
-        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 1.0) face-float)
-        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 1.0) face-float))
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float))
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-left 
     (let ((face-float (face-direction-to-float 'left)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0) face-float)
-        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 1.0 1.0) face-float)
-        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 1.0 0.0) face-float))
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float))
        (list 1 2 0 2 3 0))))
 
   (defparameter cube-right 
     (let ((face-float (face-direction-to-float 'right)))
       (list
        (list
-        (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0) face-float)
-        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0) face-float)
-        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 0.0 1.0) face-float))
+        (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float))
        (list 3 2 0 1 3 0))))
 
   (defparameter cube-top 
     (let ((face-float (face-direction-to-float 'top)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 1.0) (2d-to-1d 0.0 1.0) face-float)
-        (list (3d-to-1d 0.0 1.0 0.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 1.0 1.0 0.0) (2d-to-1d 1.0 0.0) face-float)
-        (list (3d-to-1d 1.0 1.0 1.0) (2d-to-1d 1.0 1.0) face-float))
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float))
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-bottom 
     (let ((face-float (face-direction-to-float 'bottom)))
       (list
        (list
-        (list (3d-to-1d 0.0 0.0 1.0) (2d-to-1d 0.0 0.0) face-float)
-        (list (3d-to-1d 1.0 0.0 0.0) (2d-to-1d 1.0 1.0) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0) (2d-to-1d 0.0 1.0) face-float)
-        (list (3d-to-1d 1.0 0.0 1.0) (2d-to-1d 1.0 0.0) face-float))
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float))
        (list 2 1 0 1 3 0))))
 
   (let ((cache (make-hash-table :test #'equal)))
@@ -119,8 +119,7 @@
   (let ((verts (first cube-mesh))
         (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
-                collect (let* ((pos-and-uv (subseq vert 0 2))
-                               (face-float (third vert))
+                collect (let* ((face-float (third vert))
                                (face-float
                                  (+ face-float
                                     (case distance-from-top-block
@@ -137,15 +136,25 @@
                                  
                                  ;;(if highest-block-in-chunk? (+ 6f0 face-float) face-float)
                                  ))
-                          (append pos-and-uv
-                                  (list
-                                   face-float
-                                   (2d-to-1d (getf mesh-instance :atlas-column)
-                                             (getf mesh-instance :atlas-row))
-                                   (3d-to-1d (float (first offset))
-                                             
-                                             (float (second offset))
-                                             (float (third offset)))))))
+                          (list
+                           (encode-vert-data (first vert)
+                                             (second vert)
+                                             face-float)
+                           (2d-to-1d (getf mesh-instance :atlas-column)
+                                     (getf mesh-instance :atlas-row)
+                                     256)
+                           (3d-to-1d (float (first offset))
+                                     (float (second offset))
+                                     (float (third offset))))
+                          ;; (append pos-and-uv
+                          ;;         (list
+                          ;;          face-float
+                          ;;          (2d-to-1d (getf mesh-instance :atlas-column)
+                          ;;                    (getf mesh-instance :atlas-row))
+                          ;;          (3d-to-1d (float (first offset))
+                          ;;                    (float (second offset))
+                          ;;                    (float (third offset)))))
+                          ))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)
@@ -180,4 +189,115 @@
     (defparameter *cube-indices* (second cube-mesh))))
 
 (setup-default-cube-mesh)
+ 
+(defun pad-int-left-to-str (int-to-pad desired-length)
+  (let* ((int-str (format nil "~a" int-to-pad))
+         (int-lst (coerce int-str 'list)))
+    (coerce
+     (left-pad int-lst :desired-length desired-length :padding #\0)
+     'string)))
 
+(defun encode-vert-data (pos-index uv-index face-light-float)
+  (let ((face-light-float (pad-int-left-to-str (truncate face-light-float) 2))
+        ;;(texture-atlas-index (pad-int-left-to-str (truncate texture-atlas-index) 5))
+        )
+    (read-from-string
+     (format nil
+             "1~af0"
+             (pad-int-left-to-str
+              (format nil "~a~a~a"
+                      (truncate pos-index)
+                      (truncate uv-index)
+                      face-light-float)
+              4))
+     )))
+
+(defun 1d-to-3dc (index cols depth)
+  (let* ((z (truncate (/ index (* cols depth))))
+         (index (- index (* z cols depth)))
+         (x (mod index cols))
+         (y (truncate (/ index cols))))
+    (vec3 (float x) (float y) (float z))))
+
+(defun 1d-to-2dc (index cols)
+  (let* ((x (mod index cols))
+         (y (truncate (/ index cols))))
+    (vec2 (float x) (float y))))
+
+(defun decode-vert-data (vert-int)
+  (let* ((vert (format nil "~a" vert-int))
+         (pos (parse-integer (to-string (char vert 1))))
+         (uv (parse-integer (to-string (char vert 2))))
+         (face-float (parse-integer (subseq vert 3 5)))
+         (texture-atlas-index (parse-integer (subseq vert 5 10))))
+    (list :pos (1d-to-3dc pos 2 2)
+          :uv (1d-to-2dc uv 2)
+          :face-float face-float
+          :texture-atlas-index (1d-to-2dc texture-atlas-index 128))))
+
+(defun decode-vert-data-nostrings (vert-int)
+  (let* ((vert (- vert-int 1000000000))
+         (pos (truncate (/ vert 100000000)))
+         (vert (- vert (* pos 100000000)))
+
+         (uv (truncate (/ vert 10000000)))
+         (vert (- vert (* uv 10000000)))
+         (uv (1d-to-2dc uv 2))
+         (face-float (float (truncate (/ vert 100000))))
+         (vert (- vert (* face-float 100000)))
+
+         (texture-atlas-index (1d-to-2dc vert 128)))
+    (list :pos (1d-to-3dc pos 2 2)
+          :uv uv
+          :face-float face-float
+          :texture-atlas-index texture-atlas-index)))
+
+(defun decode-test(vert-int)
+  (let* ((vert-int (truncate vert-int))
+         (vert (- vert-int 1000000000))
+         (pos (truncate (/ vert 100000000)))
+         (vert (- vert (* pos 100000000)))
+
+         (uv (truncate (/ vert 10000000)))
+         (vert (- vert (* uv 10000000)))
+         ;;(uv (1d-to-2dc uv 2))
+         (face-float (float (truncate (/ vert 100000))))
+         ;;(vert (- vert (* face-float 100000)))
+
+         ;;(texture-atlas-index vert)
+         )
+    (list :pos pos
+          :uv uv
+          :face-float face-float
+          ;;:texture-atlas-index texture-atlas-index
+          )))
+
+(defun decode-vert-float (vert-float)
+  (let* ((vert-float (float vert-float))
+         (pos (floor (* 10 vert-float)))
+         (vert-float (* 10 vert-float))
+         
+         )
+    (list :pos pos
+          :vert vert-float
+          ;; :uv uv
+          ;; :face-float face-float
+          ;; :texture-atlas-index texture-atlas-index
+          )))
+
+(defun decode-test-shortint (vert-int)
+  (let* ((vert-int (truncate vert-int))
+         (vert (- vert-int 10000))
+         (pos (truncate (/ vert 1000)))
+         (vert (- vert (* pos 1000)))
+         
+         (uv (truncate (/ vert 100)))
+         (vert (- vert (* uv 100)))
+         (uv (1d-to-2dc uv 2))
+         (face-float (float vert))
+         )
+    (list :pos (1d-to-3dc pos 2 2)
+          :uv uv
+          :face-float face-float
+          ;;:texture-atlas-index texture-atlas-index
+          )))
