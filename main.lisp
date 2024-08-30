@@ -31,9 +31,11 @@
 ;;   (local-offset :float))
 
 (defstruct-g block-vert
-  (vert-data :float)
-  (texture-atlas-index :float)
-  (local-offset :float))
+  (data1 :float)
+  (data2 :float)
+  ;;(texture-atlas-index :float)
+  ;;(local-offset :float)
+  )
 
 (defun-g id-to-uv-offset ((id :int) (atlas-size :float))
   (vec2 (/ (float (mod id atlas-size)) atlas-size)
@@ -108,34 +110,37 @@
         1.0
         1.1))))
 
-;; (defun-g decode-vert-data ((vert-data :float))
-;;   (let* ((vert (- vert-data 1000000000))
-;;          (pos (/ vert 100000000))
-;;          (vert (- vert (* pos 100000000)))
-;;          (uv (/ vert 10000000))
-;;          (vert (- vert (* uv 10000000)))
-;;          (face-float (/ vert 100000))
-;;          (vert (- vert (* face-float 100000)))
-;;          (texture-atlas-index vert))
-;;     (vec4 (float pos)
-;;           (float uv)
-;;           (float face-float)
-;;           (float texture-atlas-index))))
-
-(defun-g decode-vert-data ((vert-data :float))
-  (let* ((vert-data (round vert-data))
-         (vert (- vert-data 10000))
-         (pos (round (/ vert 1000)))
-         (vert (- vert (* pos 1000)))
-         (uv (round (/ vert 100)))
-         (vert (- vert (* uv 100)))
-         (face-float (float vert))
-         )
+(defun-g decode-vert-data1 ((data1 :float))
+  (let* ((local-offset-index (floor data1))
+         (data1 (* data1 100))
+         (data1 (- data1 (* local-offset-index 100)))
+         (pos (round (/ data1 10)))
+         (uv (round (- data1 (* 10 pos)))))
     (vec3 pos
           uv
-          face-float
-          ;;:texture-atlas-index texture-atlas-index
-          )))
+          local-offset-index)))
+
+(defun-g decode-vert-data2 ((data2 :float))
+  (let* ((face-float (round data2))
+         (texture-atlas-index (* data2 100000))
+         (texture-atlas-index (- texture-atlas-index (* 100000 face-float))))
+    (vec2 face-float
+          (round texture-atlas-index))))
+
+;; (defun-g decode-vert-data1 ((vert-data :float))
+;;   (let* ((vert-data (round vert-data))
+;;          (vert (- vert-data 10000))
+;;          (pos (round (/ vert 1000)))
+;;          (vert (- vert (* pos 1000)))
+;;          (uv (round (/ vert 100)))
+;;          (vert (- vert (* uv 100)))
+;;          (face-float (float vert))
+;;          )
+;;     (vec3 pos
+;;           uv
+;;           face-float
+;;           ;;:texture-atlas-index texture-atlas-index
+;;           )))
 
 (defun-g my-cool-perlin-noise ((x :float))
   (nineveh:perlin-noise (vec2 x x)))
@@ -153,15 +158,19 @@
                      (chunk-width :int)
                      (chunk-height :int)
                      (atlas-size :float))
-  (let* ((vert-data (block-vert-vert-data vert))
-         (vert-data (decode-vert-data vert-data))
-         (pos (aref vert-data 0))
-         (uv (aref vert-data 1))
-         (face-light-float (aref vert-data 2))
-         (texture-atlas-index (block-vert-texture-atlas-index vert))
+  (let* ((data1 (block-vert-data1 vert))
+         (data1 (decode-vert-data1 data1))
+         (pos (aref data1 0))
+         (uv (aref data1 1))
+         (local-offset-index (aref data1 2))
+
+         (data2 (block-vert-data2 vert))
+         (data2 (decode-vert-data2 data2))
+         (face-light-float (aref data2 0))
+         (texture-atlas-index (aref data2 1))
          
          (pos (1d-to-3d pos 2.0 2.0))
-         (pos (+ pos (1d-to-3d (block-vert-local-offset vert) chunk-width chunk-height)))
+         (pos (+ pos (1d-to-3d local-offset-index chunk-width chunk-height)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
@@ -178,16 +187,20 @@
                  ;;  -32
                  ;;  -15)
                  ;;(vec4 -36 -32 -100 1)
+                 ;; (vec4 -20 -15 -100 1)
                  ))
 
          (atlas-coords (1d-to-2d texture-atlas-index 256))
          (uv (1d-to-2d uv 2.0))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
+    
     (values (* proj pos)
             uv
             ;;(1d-to-2d face-light-float)
             face-light-float
-            pos)))
+            pos
+            ;;(:feedback (vec3 data2 123.0))
+            )))
 
 
 
@@ -340,6 +353,9 @@
   (star-vert :vec3)
   (star-frag :vec4))
 
+(defpipeline-g basic-pipeline ()
+  (vert-stage block-vert)
+  (frag-stage :vec2 :float :vec4))
 
 
 (let (sky-buffer)
@@ -391,10 +407,6 @@
 (defun delta-between (lower-bound upper-bound number)
   (float (change-range number lower-bound upper-bound 0 1)))
 
-(defpipeline-g basic-pipeline ()
-  (vert-stage block-vert)
-  (frag-stage :vec2 :float :vec4))
-
 (let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 6.0)) 'single-float)))
   (declare (type single-float time-divisor))
   (defparameter *now* (get-internal-real-time))
@@ -435,7 +447,14 @@
                       *texture-cell-size*))
          'single-float)))
 
+(defparameter *transform-feedback-array* nil)
+(defparameter *transform-feedback-stream* nil)
+
 (defun init (&optional (width *chunk-width*) (radius-x 8) (radius-z radius-x))
+  (unless *transform-feedback-array*
+    (setf *transform-feedback-array* (make-gpu-array nil :element-type :vec3 :dimensions 1000)))
+  (unless *transform-feedback-stream*
+    (setf *transform-feedback-stream* (make-transform-feedback-stream *transform-feedback-array*)))
   (setf (surface-title (current-surface)) "vox")
   (with-paused-rendering
     (resolve-textures))

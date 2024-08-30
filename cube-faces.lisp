@@ -136,16 +136,17 @@
                                  
                                  ;;(if highest-block-in-chunk? (+ 6f0 face-float) face-float)
                                  ))
+                          
                           (list
-                           (encode-vert-data (first vert)
-                                             (second vert)
-                                             face-float)
-                           (2d-to-1d (getf mesh-instance :atlas-column)
-                                     (getf mesh-instance :atlas-row)
-                                     256)
-                           (3d-to-1d (float (first offset))
-                                     (float (second offset))
-                                     (float (third offset))))
+                           (encode-vert-data1 (first vert)
+                                              (second vert)
+                                              (3d-to-1d (float (first offset))
+                                                        (float (second offset))
+                                                        (float (third offset))))
+                           (encode-vert-data2 face-float
+                                              (2d-to-1d (getf mesh-instance :atlas-column)
+                                                        (getf mesh-instance :atlas-row)
+                                                        256)))
                           ;; (append pos-and-uv
                           ;;         (list
                           ;;          face-float
@@ -197,20 +198,7 @@
      (left-pad int-lst :desired-length desired-length :padding #\0)
      'string)))
 
-(defun encode-vert-data (pos-index uv-index face-light-float)
-  (let ((face-light-float (pad-int-left-to-str (truncate face-light-float) 2))
-        ;;(texture-atlas-index (pad-int-left-to-str (truncate texture-atlas-index) 5))
-        )
-    (read-from-string
-     (format nil
-             "1~af0"
-             (pad-int-left-to-str
-              (format nil "~a~a~a"
-                      (truncate pos-index)
-                      (truncate uv-index)
-                      face-light-float)
-              4))
-     )))
+
 
 (defun 1d-to-3dc (index cols depth)
   (let* ((z (truncate (/ index (* cols depth))))
@@ -257,20 +245,12 @@
          (vert (- vert-int 1000000000))
          (pos (truncate (/ vert 100000000)))
          (vert (- vert (* pos 100000000)))
-
          (uv (truncate (/ vert 10000000)))
          (vert (- vert (* uv 10000000)))
-         ;;(uv (1d-to-2dc uv 2))
-         (face-float (float (truncate (/ vert 100000))))
-         ;;(vert (- vert (* face-float 100000)))
-
-         ;;(texture-atlas-index vert)
-         )
+         (face-float (float (truncate (/ vert 100000)))))
     (list :pos pos
           :uv uv
-          :face-float face-float
-          ;;:texture-atlas-index texture-atlas-index
-          )))
+          :face-float face-float)))
 
 (defun decode-vert-float (vert-float)
   (let* ((vert-float (float vert-float))
@@ -285,6 +265,20 @@
           ;; :texture-atlas-index texture-atlas-index
           )))
 
+(defun encode-vert-data (pos-index uv-index face-light-float)
+  (let ((face-light-float (pad-int-left-to-str (truncate face-light-float) 2))
+        ;;(texture-atlas-index (pad-int-left-to-str (truncate texture-atlas-index) 5))
+        )
+    (read-from-string
+     (format nil
+             "1~af0"
+             (pad-int-left-to-str
+              (format nil "~a~a~a"
+                      (truncate pos-index)
+                      (truncate uv-index)
+                      face-light-float)
+              4)))))
+
 (defun decode-test-shortint (vert-int)
   (let* ((vert-int (truncate vert-int))
          (vert (- vert-int 10000))
@@ -298,6 +292,41 @@
          )
     (list :pos (1d-to-3dc pos 2 2)
           :uv uv
-          :face-float face-float
-          ;;:texture-atlas-index texture-atlas-index
-          )))
+          :face-float face-float)))
+
+(defun encode-vert-data1 (pos-index uv-index local-offset-index)
+  (let ((local-offset-index (pad-int-left-to-str (truncate local-offset-index) 6)))
+    (read-from-string
+     (format nil "~a.~a~af0"
+             local-offset-index
+             (truncate pos-index)
+             (truncate uv-index)
+))))
+
+(defun encode-vert-data2 (face-light-float texture-atlas-index)
+  (let ((face-light-float (pad-int-left-to-str (truncate face-light-float) 2))
+        (texture-atlas-index (pad-int-left-to-str (truncate texture-atlas-index) 5)))
+    (read-from-string
+     (format nil "~a.~af0"
+             face-light-float
+             texture-atlas-index))))
+
+(defun decode-test-shortint1 (vert-int)
+  (let* ((local-offset-index (floor vert-int))
+         (vert-int (* vert-int 100))
+         (vert-int (- vert-int (* local-offset-index 100)))
+         (pos (floor (/ vert-int 10)))
+         (uv (- vert-int (* 10 pos)))
+         ;;(texture-atlas-index (* vert-int 100000))
+         ;;(texture-atlas-index (- texture-atlas-index (* 100000 face-float)))
+         )
+    (list :pos (1d-to-3dc pos 2 2)
+          :uv (1d-to-2dc uv 2)
+          :local-offset-index (1d-to-3dc local-offset-index 16 128))))
+
+(defun decode-test-shortint2 (vert-int)
+  (let* ((face-float (floor vert-int))
+         (texture-atlas-index (* vert-int 100000))
+         (texture-atlas-index (- texture-atlas-index (* 100000 face-float))))
+    (list :face-float face-float
+          :texture-atlas-index (1d-to-2dc texture-atlas-index 256))))
