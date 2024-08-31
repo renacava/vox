@@ -153,13 +153,25 @@
   (vert-stage block-vert)
   (frag-stage :vec2 :float :vec4))
 
-(let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'single-float)))
-  (declare (type single-float time-divisor))
+(let* ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'double-float))
+       ;;(dtime-divisor (coerce (/ org.shirakumo.precise-time:precise-time-units-per-second )))
+       )
+  (declare (type double-float time-divisor))
   (defparameter *now* (get-internal-real-time))
+  (defparameter *now-double* (coerce *now* 'double-float))
   (defun update-now ()
-    (setf *now* (/ (get-internal-real-time) time-divisor))
-    (update-sky-colour)
-    *now*))
+    (let* (
+           (times (multiple-value-list (org.shirakumo.precise-time:get-precise-time)))
+           (slack (* 100000 (truncate (/ (first times) 100000))))
+           (seconds (- (first times) slack))
+           (double-time 0d0)
+           (double-time (+ double-time (/ (second times) 10000000) seconds)))
+      (setf *now-double* double-time)
+      ;;(setf *now-double* (coerce (/ (get-internal-real-time) time-divisor) 'double-float))
+      (setf *now* (coerce *now-double* 'single-float))
+      (update-sky-colour)
+      *now*)
+))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -199,6 +211,7 @@
   (make-chunks radius-x width *chunk-height* radius-z))
 
 (defparameter *delta* 1.0)
+(defparameter *delta-double* (coerce *delta* 'double-float))
 (defparameter *fps* 1)
 (defparameter *blending-params* (make-blending-params))
 
@@ -266,17 +279,22 @@
                                        (step-host)
                                        (livesupport:update-repl-link)
                                        (sleep 0.01))
-                                     (let ((start-time (update-now)))
+                                     (let ((start-time (progn (update-now) *now-double*)))
                                        (ignore-errors
                                         (setf (resolution (current-viewport))
                                               (get-cepl-context-surface-resolution)))
                                        (step-rendering)
                                        (step-host)
                                        (livesupport:update-repl-link)
-                                       (setf *delta* (- (update-now) start-time))
-                                       (setf *fps* (truncate (/ 1.0 (if (= *delta* 0)
-                                                                        1.0
-                                                                        *delta*))))))
+
+                                       (update-now)
+
+                                       (setf *delta-double* (- *now-double* start-time))
+                                       (setq my-stuff (list *delta-double* *now-double* start-time))
+                                       (setf *delta* (coerce *delta-double* 'single-float))
+                                       (setf *fps* (truncate (/ 1.0d0 (if (= *delta-double* 0.0)
+                                                                        0.00001d0
+                                                                        *delta-double*))))))
                                  (funcall inner-loader-thread-func))))
 
 (defun main ()

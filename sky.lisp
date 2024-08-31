@@ -179,7 +179,8 @@
 (defun lerp-vec3 (v1 v2 delta)
   (vec3 (lerp (aref v1 0) (aref v2 0) delta)
         (lerp (aref v1 1) (aref v2 1) delta)
-        (lerp (aref v1 2) (aref v2 2) delta)))
+        (lerp (aref v1 2) (aref v2 2) delta))
+  )
 
 (defun lerp-vec3-between-numbers (v1 v2 current-number lower-number higher-number)
   (lerp-vec3 v1 v2 (delta-between lower-number higher-number current-number)))
