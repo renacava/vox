@@ -202,12 +202,16 @@
 (defparameter *fps* 1)
 (defparameter *blending-params* (make-blending-params))
 
+(defun toggle-vsync ()
+  (setf (cepl.sdl2::vsync)
+        (not (cepl.sdl2::vsync))))
+
 (defun step-rendering ()
   (unless *rendering-paused?*
     (setf (clear-color) sky-colour)
     (clear)
     (update-now)
-    (vox-cam:update-camera *camera*)
+    (vox-cam:update-camera *camera* *delta*)
     (setup-projection-matrix)
     (with-blending *blending-params*
       (render-night-sky)
