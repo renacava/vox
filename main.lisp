@@ -82,6 +82,7 @@
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (cam-pos :vec3)
+                     (cam-rot :vec3)
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
@@ -94,10 +95,14 @@
          (uv (aref data1 1))
          (local-offset-index (aref data1 2))
 
+         (rot (rtg-math.matrix4:rotation-from-euler cam-rot))
+
          (data2 (block-vert-data2 vert))
          (data2 (decode-vert-data2 data2))
          (face-light-float (aref data2 0))
          (texture-atlas-index (aref data2 1))
+
+         
          
          (pos (1d-to-3d pos 2.0 2.0))
          (pos (+ pos (1d-to-3d local-offset-index chunk-width chunk-height)))
@@ -128,7 +133,7 @@
          (uv (1d-to-2d uv 2.0))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
     
-    (values (* proj pos)
+    (values (* proj pos rot)
             uv
             face-light-float
             pos)))
@@ -205,6 +210,7 @@
   ;; (unless *transform-feedback-stream*
   ;;   (setf *transform-feedback-stream* (make-transform-feedback-stream *transform-feedback-array*)))
   (setf (surface-title (current-surface)) "vox")
+  (sdl2:set-relative-mouse-mode t)
   (with-paused-rendering
     (resolve-textures))
   (setup-projection-matrix)
