@@ -216,8 +216,6 @@
     (with-blending *blending-params*
       (render-night-sky)
       (render-chunks))
-    
-    (step-host)
     (swap)))
 
 (defparameter inner-loader-thread-func (lambda ()
