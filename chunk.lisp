@@ -44,6 +44,7 @@
                             (aref sky-colour 2)
                             0.1)))
       (map-g #'basic-pipeline (buffer-stream chunk)
+             :cam-pos (pos *camera*)
              :now *now*
              :proj *projection-matrix*
              :offset (offset chunk)

@@ -2,6 +2,7 @@
 
 (defparameter *projection-matrix* nil)
 (defparameter *rendering-paused?* nil)
+(defparameter *camera* (vox-cam:make-camera))
 
 (defmacro with-paused-rendering (&body body)
   `(let ((prior-state *rendering-paused?*))
@@ -80,6 +81,7 @@
 
 (defun-g vert-stage ((vert block-vert)
                      &uniform
+                     (cam-pos :vec3)
                      (now :float)
                      (proj :mat4)
                      (offset :vec3)
@@ -105,18 +107,20 @@
          (pos (* pos 0.5))
          (now (* 1.5 now))
          (pos (+ pos
-                 (vec4
-                  (+ -256 ;;(* -100 (sin (* 0.25 now)))
-                     )
-                  (+ -140 ;;(* 20 (sin now))
-                     )
-                  (+ -760 ;;(* 25 (+ 1 (sin (* 2.0 now))))
-                     ))
+                 ;; (vec4
+                 ;;  (+ -256 ;;(* -100 (sin (* 0.25 now)))
+                 ;;     )
+                 ;;  (+ -140 ;;(* 20 (sin now))
+                 ;;     )
+                 ;;  (+ -760 ;;(* 25 (+ 1 (sin (* 2.0 now))))
+                 ;;     ))
                  ;; (vec4
                  ;;  (+ -100 (sin (* 2 now)))
                  ;;  -32
                  ;;  -15)
-                 ;;(vec4 -7 -30 -20 1)
+                 (vec4 -110
+                       -64 -330 1)
+                 (vec4 cam-pos 1)
                  ;;(vec4 -20 -15 -100 1)
                  ))
 
@@ -149,12 +153,13 @@
   (vert-stage block-vert)
   (frag-stage :vec2 :float :vec4))
 
-(let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 6.0)) 'single-float)))
+(let ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'single-float)))
   (declare (type single-float time-divisor))
   (defparameter *now* (get-internal-real-time))
   (defun update-now ()
     (setf *now* (/ (get-internal-real-time) time-divisor))
-    (update-sky-colour)*now*))
+    (update-sky-colour)
+    *now*))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -202,6 +207,7 @@
     (setf (clear-color) sky-colour)
     (clear)
     (update-now)
+    (vox-cam:update-camera *camera*)
     (setup-projection-matrix)
     (with-blending *blending-params*
       (render-night-sky)

@@ -22,15 +22,18 @@
                #:deploy
                #:lparallel
                #:precise-time
-               #:vox-world-sample)
+               #:vox-world-sample
+               #:vox-cam)
   :components ((:file "package")
                (:file "utilities")
+               (:file "sky")
                (:file "cube")
                (:file "cube-faces")
                (:file "chunk")
                (:file "meshes")
                (:file "cull-hidden")
                (:file "sunlight")
+               
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"
