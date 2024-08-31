@@ -80,6 +80,7 @@
                                       (make-chunk offset
                                                   ;;(vws:make-random-chunk-blocks3d offset)
                                                   (vox-world-sample:make-random-chunk-blocks2d offset)
+                                                  ;;(vox-world-sample:make-random-chunk-blocks2d-columns offset)
                                                   ;;(vox-world-sample::make-random-chunk-blocks-caved offset)
                                                   ;;(vox-world-sample:make-slicey-chunk offset)
                                                   width
@@ -88,15 +89,16 @@
 
 (defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*) (height *chunk-height*))
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
-  (labels ((queue ()
-             (if (queue-full?)
-                 (progn (sleep 0.0001)
-                        (queue))
-                 (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols)
-                              chunk-offset
-                              width
-                              height))))
-    (queue)))
+  (when block-positions-and-symbols
+    (labels ((queue ()
+               (if (queue-full?)
+                   (progn (sleep 0.0001)
+                          (queue))
+                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols)
+                                chunk-offset
+                                width
+                                height))))
+      (queue))))
 
 (defun make-chunk-mesh-from-data (block-positions-and-symbols)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."

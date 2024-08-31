@@ -6,26 +6,24 @@
      ,@body
      (gl:enable :depth-test)))
 
-(defparameter *sky-colours* (list
-                             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             ;; alway day
-                             ;; (list 0 (vec3 0.3 0.55 1.0))
-                             ;; (list 0.5 (vec3 0.3 0.3 1.0))
-                             ;; (list 1 (vec3 0.3 0.55 1.0))
-
-                             ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-                             ;; actual daytime colours
-                             (list (/ 0 24) (vec3 0.02 0.0 0.05)) ;; midnight
-                             (list (/ 2 24) (vec3 0.03 0.03 0.1)) ;; night
-                             (list (/ 4 24) (vec3 0.5 0.3 0.2)) ;; dawn
-                             (list (/ 7 24) (vec3 0.3 0.55 1.0)) ;; morning
-                             (list (/ 12 24) (vec3 0.3 0.55 1.0)) ;; noon
-                             (list (/ 16 24) (vec3 0.3 0.3 1.0)) ;; afternoon
-                             (list (/ 17 24) (vec3 0.7 0.5 0.4)) ;; dusk
-                             (list (/ 19 24) (vec3 0.3 0.2 0.35)) ;; twilight
-                             (list (/ 21 24) (vec3 0.03 0.03 0.1)) ;; night
-                             (list (/ 24 24) (vec3 0.02 0.0 0.05)) ;; midnight
-                             ))
+(defparameter *always-day?* nil)
+(defparameter *sky-colours*
+  (lambda () (if *always-day?*
+                 (list (list 0 (vec3 0.3 0.55 1.0))
+                       (list 0.5 (vec3 0.3 0.3 1.0))
+                       (list 1 (vec3 0.3 0.55 1.0)))
+                 (list (list (/ 0 24) (vec3 0.02 0.0 0.05)) ;; midnight
+                       (list (/ 2 24) (vec3 0.03 0.03 0.1)) ;; night
+                       (list (/ 4 24) (vec3 0.5 0.3 0.2)) ;; dawn
+                       (list (/ 7 24) (vec3 0.3 0.55 1.0)) ;; morning
+                       (list (/ 12 24) (vec3 0.3 0.55 1.0)) ;; noon
+                       (list (/ 16 24) (vec3 0.3 0.3 1.0)) ;; afternoon
+                       (list (/ 17 24) (vec3 0.7 0.5 0.4)) ;; dusk
+                       (list (/ 19 24) (vec3 0.3 0.2 0.35)) ;; twilight
+                       (list (/ 21 24) (vec3 0.03 0.03 0.1)) ;; night
+                       (list (/ 24 24) (vec3 0.02 0.0 0.05))) ;; midnight
+                 )))
+  
 (defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
 
 (defun-g face-light-float-to-multiplier ((face-light-float :float))
@@ -213,7 +211,8 @@
 (defparameter *seconds-per-day* 60)
 
 (defun update-sky-colour (&optional (time *now*))
-  (let ((sky-col (lerp-vec3s (change-range (sin (* time 3 (/ 1 *seconds-per-day*))) -1 1 0 1) *sky-colours*)))
+  (let* ((resolved-sky-colours (resolve *sky-colours*))
+         (sky-col (lerp-vec3s (change-range (sin (* time 3 (/ 1 *seconds-per-day*))) -1 1 0 1) resolved-sky-colours)))
     (setf sky-colour
           (vec4 (aref sky-col 0)
                 (aref sky-col 1)
