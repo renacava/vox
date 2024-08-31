@@ -166,7 +166,7 @@
                                                              (y (resolution (current-viewport)))
                                                              0.1
                                                              10000f0
-                                                             60f0)))
+                                                             90f0)))
 
 (defun load-texture-atlas ()
   (with-paused-rendering
