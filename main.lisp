@@ -131,12 +131,13 @@
 
          (atlas-coords (1d-to-2d texture-atlas-index 256))
          (uv (1d-to-2d uv 2.0))
-         (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv)))
+         (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv))
+         (pos (* proj pos rot)))
     
-    (values (* proj pos rot)
+    (values pos;;(* proj pos rot)
             uv
             face-light-float
-            (* proj pos rot))))
+            pos)))
 
 
 (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d) (skylight-colour :vec3) (sky-colour :vec4))

@@ -100,16 +100,13 @@
   (let* ((sky-brightness (max (aref sky-colour 0)
                               (aref sky-colour 1)
                               (aref sky-colour 2)))
-         (pos (vec4 (+ (aref pos 0) (* 0.00075 now)
-                       )
-                    (+ (aref pos 1) (* 0.00075 now)
-                       )
+         (pos (vec4 (+ (aref pos 0) (* 0.0001 now))
+                    (+ (aref pos 1) (* 0.0001 now))
                     (aref pos 2)
                     (aref pos 3)))
          
          
-         (perlin1 (nineveh:cellular-noise-fast (* 10 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
-                                                           ))))
+         (perlin1 (nineveh:cellular-noise-fast (* 10 (vec2 (aref pos 0) (aref pos 1)))))
          (perlin1 (min 1.0 (max 0.0 (* perlin1 2))))
          (star1 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
                                      0.9 0.0 20))
@@ -118,30 +115,13 @@
                       (* (aref star1 1) (+ 0.9 (mod (aref pos 1) 0.1)))
                       (* (aref star1 2) (+ 0.9 (mod (aref pos 2) 0.1)))
                       1.0))
-         (star1 (* star1 1.0))
+         (star1 (* star1 0.75))
          
          (star1 (* star1 (- 1 sky-brightness)))
 
+         ;;;;;;;;;;;;;;;;;;;
 
-         
-         ;; (perlin2 (nineveh:perlin-noise (* 3 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
-         ;;                                                   ))))
-         ;; (perlin2 (min 1.0 (max 0.0 (* perlin2 1.0))))
-         ;; (star2 (nineveh:stars-noise (* 30 (vec2 (aref pos 0) (aref pos 1)))
-         ;;                             0.3 0.0 30))
-         ;; (star2 (* (vec4 star2 star2 star2 1.0) perlin2))
-         ;; (star2 (vec4 (* (aref star2 0) (+ 0.7 (mod (aref pos 0) 0.3)))
-         ;;              (* (aref star2 1) (+ 0.7 (mod (aref pos 1) 0.3)))
-         ;;              (* (aref star2 2) (+ 0.7 (mod (aref pos 2) 0.3)))
-         ;;              1.0))
-         ;; (star2 (* star2 30))
-         
-         ;; (star2 (* star2 (- 1 sky-brightness)))
-
-
-
-         (perlin3 (nineveh:perlin-noise (* 1 (vec2 (aref pos 1) (aref pos 0) ;;(aref pos 2)
-                                                   ))))
+         (perlin3 (nineveh:perlin-noise (* 1 (vec2 (aref pos 1) (aref pos 0)))))
          (perlin3 (min 1.0 (max 0.0 (* perlin3 1.0))))
          (star3 (nineveh:stars-noise (* 80 (vec2 (aref pos 0) (aref pos 1)))
                                      0.005 0.0 15))
@@ -150,13 +130,13 @@
                       (* (aref star3 1) (+ 0.4 (mod (aref pos 1) 0.1)))
                       (* (aref star3 2) (+ 0.5 (mod (aref pos 2) 0.5)))
                       1.0))
-         (star3 (* star3 2))
-         
+         (star3 (* star3 3))
          (star3 (* star3 (- 1 sky-brightness)))
 
-
+         ;;;;;;;;;;;;;;;;;;;
+         
+         (pos (* pos (vec4 2.0 2.0 1.0 1.0)))
          (perlin4 (nineveh:perlin-noise (* 10.5 (vec2 (aref pos 0) (sin (* 0.00001 now))))))
-         ;;(perlin4 (min 1.0 (max 0.0 (* perlin4 1.0))))
          (star4 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
                                      1.0 0.0 16))
          (star4 (* (vec4 star4 star4 star4 1.0) perlin4))
@@ -164,7 +144,7 @@
                       (* (aref star4 1) (+ 0.8 (mod (aref pos 1) 0.2)))
                       (* (aref star4 2) (+ 0.8 (mod (aref pos 2) 0.2)))
                       1.0))
-         (star4 (* star4 1))
+         (star4 (* star4 2))
          
          (star4 (* star4 (- 1 sky-brightness)))
          
@@ -185,8 +165,7 @@
 (defun lerp-vec3 (v1 v2 delta)
   (vec3 (lerp (aref v1 0) (aref v2 0) delta)
         (lerp (aref v1 1) (aref v2 1) delta)
-        (lerp (aref v1 2) (aref v2 2) delta))
-  )
+        (lerp (aref v1 2) (aref v2 2) delta)))
 
 (defun lerp-vec3-between-numbers (v1 v2 current-number lower-number higher-number)
   (lerp-vec3 v1 v2 (delta-between lower-number higher-number current-number)))
