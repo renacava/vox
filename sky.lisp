@@ -88,8 +88,12 @@
 (defun-g star-vert ((vert :vec3)
                     &uniform
                     (now :float)
+                    (cam-rot :vec3)
                     (proj :mat4))
-  (let* ((vert (vec4 vert 1.0)))
+  (let* ((vert (vec4 vert 1.0))
+         ;;(rot-mat (rtg-math.matrix4:rotation-from-euler cam-rot))
+         ;;(vert (* rot-mat vert))
+         )
     (values vert vert)))
 
 (defun-g star-frag ((pos :vec4) &uniform (now :float) (sky-colour :vec4))
@@ -102,6 +106,8 @@
                        )
                     (aref pos 2)
                     (aref pos 3)))
+         
+         
          (perlin1 (nineveh:cellular-noise-fast (* 10 (vec2 (aref pos 0) (aref pos 1) ;;(aref pos 2)
                                                            ))))
          (perlin1 (min 1.0 (max 0.0 (* perlin1 2))))
@@ -212,8 +218,9 @@
 (defparameter *seconds-per-day* 60)
 
 (defun update-sky-colour (&optional (time *now*))
-  (let* ((resolved-sky-colours (resolve *sky-colours*))
-         (sky-col (lerp-vec3s (change-range (sin (* time 3 (/ 1 *seconds-per-day*))) -1 1 0 1) resolved-sky-colours)))
+  (let* ((sky-col (lerp-vec3s (change-range (sin (* time 3 (/ 1 *seconds-per-day*)))
+                                            -1 1 0 1)
+                              (resolve *sky-colours*))))
     (setf sky-colour
           (vec4 (aref sky-col 0)
                 (aref sky-col 1)
@@ -240,6 +247,7 @@
     (without-depth
       (map-g #'star-pipeline sky-buffer
              :now *now*
-             :sky-colour sky-colour))))
+             :sky-colour sky-colour
+             :cam-rot (vox-cam:cam-rot *camera*)))))
 
 

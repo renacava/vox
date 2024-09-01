@@ -136,13 +136,14 @@
     (values (* proj pos rot)
             uv
             face-light-float
-            pos)))
+            (* proj pos rot))))
 
 
 (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d) (skylight-colour :vec3) (sky-colour :vec4))
   (let* ((texture-sample (texture atlas-sampler uv))
          (sunlight-mult (face-light-float-to-multiplier face-light-float))
-         (fog-mult (min 1 (/ 1 (* (aref pos 2) -0.01))))
+         (fog-mult (min 1 (/ 1 (* (abs (aref pos 2)) 0.01)))
+           )
          (fog-colour (* skylight-colour 0.8)))
 
     (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
