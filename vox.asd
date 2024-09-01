@@ -26,14 +26,14 @@
                #:vox-cam)
   :components ((:file "package")
                (:file "utilities")
-               (:file "sky")
+               (:file "gpu-funcs")
                (:file "cube")
                (:file "cube-faces")
+               (:file "sky")
                (:file "chunk")
                (:file "meshes")
                (:file "cull-hidden")
                (:file "sunlight")
-               
                (:file "main"))
 	:defsystem-depends-on (:deploy)
 	:build-operation "deploy-op"

@@ -63,15 +63,6 @@
   (defparameter *symbol-mesh-table* (make-hash-table))
   (setup-default-cube-mesh)
   (mapcar (lambda (data) (apply #'bind-block-symbol-to-mesh data))
-          (list 
-           (list nil nil nil 1 1 t)
-           (list 'cl-user::cobblestone nil nil 0 0 t)
-           (list 'cl-user::grass nil nil 1 0 t)
-           (list 'cl-user::dirt nil nil 2 1 t)
-           (list 'cl-user::bricks nil nil 0 1 t)
-           (list 'cl-user::red nil nil 0 2 t)
-           (list 'cl-user::yellow nil nil 1 2 t)
-           (list 'cl-user::purple nil nil 2 2 t)
-           (list 'cl-user::error nil nil 1 1 t))))
+          (vox-world-sample:get-default-blocks-for-binding)))
 
 (setup-mesh-table)

@@ -28,57 +28,6 @@
   (data1 :float)
   (data2 :float))
 
-(defun-g id-to-uv-offset ((id :int) (atlas-size :float))
-  (vec2 (/ (float (mod id atlas-size)) atlas-size)
-        (/ (float (/ id atlas-size)) atlas-size)))
-
-(defun-g atlas-column-row-to-uv-offset ((column :float) (row :float) (atlas-size :float))
-  (vec2 (/ column atlas-size)
-        (/ row atlas-size)))
-
-(defun-g 1d-to-3d ((index :float) (cols :float) (depth :float))
-  (let* ((z (int (/ index (* cols depth))))
-         (index (- index (* z cols depth)))
-         (x (mod index cols))
-         (y (int (/ index cols))))
-    (vec3 x y z)))
-
-(defun-g 1d-to-2d ((index :float) (cols :float))
-  (let* ((x (mod index cols))
-         (y (int (/ index cols))))
-    (vec2 x y)))
-
-(defun-g calc-uv ((row :float) (col :float) (atlas-size :float) (uv :vec2))
-  (let ((atlas-offset (/ 1.0 atlas-size)))
-    (vec2 (+ (* row atlas-offset) (* (aref uv 0) atlas-offset))
-          (+ (* col atlas-offset) (* (aref uv 1) atlas-offset)))))
-
-(defun-g float-eq ((floata :float) (floatb :float))
-  (let ((tolerance 0.1f0))
-    (and (< floata (+ floatb tolerance))
-         (< (- floatb tolerance) floata))))
-
-(defun-g float-eq-or ((floata :float) (floatb :float) (subsequent :float) (alternative :float))
-  (if (float-eq floata floatb) subsequent alternative))
-
-
-(defun-g decode-vert-data1 ((data1 :float))
-  (let* ((local-offset-index (floor data1))
-         (data1 (* data1 100))
-         (data1 (- data1 (* local-offset-index 100)))
-         (pos (round (/ data1 10)))
-         (uv (round (- data1 (* 10 pos)))))
-    (vec3 pos
-          uv
-          local-offset-index)))
-
-(defun-g decode-vert-data2 ((data2 :float))
-  (let* ((face-float (round data2))
-         (texture-atlas-index (* data2 100000))
-         (texture-atlas-index (- texture-atlas-index (* 100000 face-float))))
-    (vec2 face-float
-          (round texture-atlas-index))))
-
 (defun-g vert-stage ((vert block-vert)
                      &uniform
                      (cam-pos :vec3)
@@ -123,8 +72,8 @@
                  ;;  (+ -100 (sin (* 2 now)))
                  ;;  -32
                  ;;  -15)
-                 (vec4 -110
-                       -64 -330 1)
+                 ;; (vec4 -110
+                 ;;       -64 -330 1)
                  (vec4 cam-pos 1)
                  ;;(vec4 -20 -15 -100 1)
                  ))
@@ -235,8 +184,9 @@
     (vox-cam:update-camera *camera* *delta*)
     (setup-projection-matrix)
     (with-blending *blending-params*
-      (render-night-sky)
-      (render-chunks))
+      ;;(render-night-sky)
+      (render-chunks)
+      )
     (swap)))
 
 (defparameter inner-loader-thread-func (lambda ()

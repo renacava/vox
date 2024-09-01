@@ -6,6 +6,7 @@
          (top-blocks-array2D (second solidity-array-result)))
     (combine-cube-faces
      (loop for pos-and-symb in positions-and-symbols
+           when (last1 pos-and-symb)
            collect (let ((x (first pos-and-symb))
                          (y (second pos-and-symb))
                          (z (third pos-and-symb))

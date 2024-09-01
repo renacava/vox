@@ -26,77 +26,35 @@
   
 (defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
 
-(defun-g face-light-float-to-multiplier ((face-light-float :float))
-  (labels ((fleq ((x :int) (subsequent :float) (alternative :float))
-             (float-eq-or face-light-float x subsequent alternative)))
-
-    (*
-     (fleq 0   0.53   ;; TOP     UN-SUNLIT
-     (fleq 1   0.5    ;; LEFT    UN-SUNLIT
-     (fleq 2   0.5    ;; RIGHT   UN-SUNLIT
-     (fleq 3   0.4    ;; FRONT   UN-SUNLIT
-     (fleq 4   0.4    ;; BACK    UN-SUNLIT
-     (fleq 5   0.32   ;; BOTTOM  UN-SUNLIT 
-      
-     (fleq 6   0.8    ;; TOP     SUNLIT
-     (fleq 7   0.6    ;; LEFT    SUNLIT
-     (fleq 8   0.6    ;; RIGHT   SUNLIT
-     (fleq 9   0.5    ;; FRONT   SUNLIT
-     (fleq 10  0.5    ;; BACK    SUNLIT
-     (fleq 11  0.4    ;; BOTTOM  SUNLIT
-
-     (fleq 12  1.0    ;; TOP     SUNLIT
-     (fleq 13  0.7    ;; LEFT    SUNLIT
-     (fleq 14  0.7    ;; RIGHT   SUNLIT
-     (fleq 15  0.6    ;; FRONT   SUNLIT
-     (fleq 16  0.6    ;; BACK    SUNLIT
-     (fleq 17  0.5    ;; BOTTOM  SUNLIT
-
-     (fleq 18  1.0    ;; TOP     SUNLIT
-     (fleq 19  0.85   ;; LEFT    SUNLIT
-     (fleq 20  0.85   ;; RIGHT   SUNLIT
-     (fleq 21  0.75   ;; FRONT   SUNLIT
-     (fleq 22  0.75   ;; BACK    SUNLIT
-     (fleq 23  0.6    ;; BOTTOM  SUNLIT
-                                                                                                                                                     
-               0.0)   ;; DEFAULT 
-     )))))))))))))))))))))))
-     (if (> face-light-float 5)
-         1.0
-         1.1))))
-
-(defun-g my-cool-perlin-noise ((x :float))
-  (nineveh:perlin-noise (vec2 x x)))
-
-(defun-g muller ((x :float) (y :float))
-  (*
-   (sqrt (* -2 (log x)))
-   (cos (float (* 2 pi y)))))
-
-(defun-g min-vec4 ((invec4 :vec4) (min-value :float))
-  (vec4 (min (aref invec4 0) min-value)
-        (min (aref invec4 1) min-value)
-        (min (aref invec4 2) min-value)
-        1.0))
-
-(defun-g max-vec4 ((invec4 :vec4) (min-value :float))
-  (vec4 (max (aref invec4 0) min-value)
-        (max (aref invec4 1) min-value)
-        (max (aref invec4 2) min-value)
-        1.0))
-
-(defun-g star-vert ((vert :vec3)
+(defun-g star-vert ((vert :vec4)
                     &uniform
                     (now :float)
                     (cam-rot :vec3)
+                    (cam-pos :vec3)
                     (proj :mat4))
-  (let* ((vert (vec4 vert 1.0))
+  (let* ((vert (1d-to-3d (aref vert 0) 2 2))
+         (vert (vec4 vert 1.0))
+         (pre-pos vert)
+         (vert (- vert (vec4 0.5 0.5 0.5 0.0)))
+         (vert (* vert 100.0))
+         ;;(vert (* vert 100.0))
+         ;;(vert (* vert 100.0))
+         (rot-mat (rtg-math.matrix4:rotation-from-euler cam-rot))
+         ;;(vert (* vert 10000000.0))
+         ;;(vert (- vert (vec4 0.5 0.5 0.5 0.4)))
+         ;;(cam-pos (vec4 cam-pos 0.0))
+         ;;(vert (+ vert cam-pos))
+         ;;(vert (* vert 100.0))
+         (vert (* proj vert rot-mat))
+         ;;vert
+         
+         ;;(vert (* vert -10000))
          ;;(rot-mat (rtg-math.matrix4:rotation-from-euler cam-rot))
          ;;(vert (* rot-mat vert))
          )
-    (values vert vert)))
+    (values vert pre-pos)))
 
-(defun-g star-frag ((pos :vec4) &uniform (now :float) (sky-colour :vec4))
+(defun-g star-frag ((pos :vec4) &uniform (now :float) (sky-colour :vec4) (cam-rot :vec3) (proj :mat4))
   (let* ((sky-brightness (max (aref sky-colour 0)
                               (aref sky-colour 1)
                               (aref sky-colour 2)))
@@ -108,7 +66,7 @@
          
          (perlin1 (nineveh:cellular-noise-fast (* 10 (vec2 (aref pos 0) (aref pos 1)))))
          (perlin1 (min 1.0 (max 0.0 (* perlin1 2))))
-         (star1 (nineveh:stars-noise (* 100 (vec2 (aref pos 0) (aref pos 1)))
+         (star1 (nineveh:stars-noise (* 10 (vec2 (aref pos 0) (aref pos 1)))
                                      0.9 0.0 20))
          (star1 (* (vec4 star1 star1 star1 1.0) perlin1))
          (star1 (vec4 (* (aref star1 0) (+ 0.9 (mod (aref pos 0) 0.1)))
@@ -155,11 +113,18 @@
     
     (+ sky-colour
        star1
-       star3
-       star4)))
+       ;;star3
+       ;;star4
+       )
+    ;; (vec4 (mod (aref pos 0) 1.0)
+    ;;       (mod (aref pos 1) 1.0)
+    ;;       (mod (aref pos 2) 1.0)
+    ;;       1.0)
+    ;;(vec4 1.0 0.0 0.0 1.0)
+    ))
 
 (defpipeline-g star-pipeline ()
-  (star-vert :vec3)
+  (star-vert :vec4)
   (star-frag :vec4))
 
 (defun lerp-vec3 (v1 v2 delta)
@@ -171,7 +136,7 @@
   (lerp-vec3 v1 v2 (delta-between lower-number higher-number current-number)))
 
 (defun get-bounds-from-numbers (number numbers)
-  "Returns the two numbers adjacent to number in the given sorted list of numbers."
+  "Returns the two numbers adjacent to number in the given sorted list of numbers, and the indices to elt them from within the given numbers list."
   (loop for number-index below (1- (length numbers))
         do (let ((lower (elt numbers number-index))
                  (higher (elt numbers (1+ number-index))))
@@ -207,6 +172,17 @@
                 1.0))))
 
 (let (sky-buffer)
+  (defparameter sky-box
+    (let* ((cube-mesh (copy-list (build-cube-mesh-from-faces `(top bottom left right front back))))
+           (vert-array (loop for vert in (first cube-mesh)
+                             collect (vec4 (first vert) (second vert) (third vert) 1.0)))
+           (index-array (copy-list ;;(second cube-mesh)
+                                   (reverse (second cube-mesh))
+                                   )))
+      (list (make-c-array vert-array)
+            (make-c-array index-array :element-type :uint))))
+
+  
   (defparameter my-cool-rect (list
                               (make-c-array
                                (list (vec4 -1.0 -1.0 0.0 1.0)
@@ -220,13 +196,15 @@
     (unless sky-buffer
       (setf sky-buffer
             (make-buffer-stream
-             (make-gpu-array (first my-cool-rect))
-             :index-array (make-gpu-array (second my-cool-rect)))))
+             (make-gpu-array (first sky-box))
+             :index-array (make-gpu-array (second sky-box)))))
     
     (without-depth
       (map-g #'star-pipeline sky-buffer
              :now *now*
+             :proj *projection-matrix*
              :sky-colour sky-colour
-             :cam-rot (vox-cam:cam-rot *camera*)))))
+             :cam-rot (vox-cam:cam-rot *camera*)
+             :cam-pos (vox-cam:cam-pos *camera*)))))
 
 
