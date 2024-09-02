@@ -88,6 +88,9 @@
                                                   height))
                                     offset-group)))))))
 
+(defun regen-chunk (&optional (chunk-offset `(0 0 0)) (block-positions-and-symbols (vox-world-sample:make-random-chunk-blocks2d chunk-offset)))
+  (vox::make-chunk chunk-offset block-positions-and-symbols))
+
 (defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*) (height *chunk-height*))
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
   (when block-positions-and-symbols
