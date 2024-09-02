@@ -54,10 +54,10 @@
     (let ((face-float (face-direction-to-float 'front)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
-        (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 1.0 1.0 2) face-float)
-        (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 1.0 0.0 2) face-float))
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 0.0 0.0 2) face-float))
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-front
