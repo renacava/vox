@@ -109,25 +109,37 @@
   (vert-stage block-vert)
   (frag-stage :vec2 :float :vec4))
 
-(let* ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'double-float))
-       ;;(dtime-divisor (coerce (/ org.shirakumo.precise-time:precise-time-units-per-second )))
-       )
+(let* ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'double-float)))
   (declare (type double-float time-divisor))
   (defparameter *now* (get-internal-real-time))
   (defparameter *now-double* (coerce *now* 'double-float))
+  (defparameter *delta* 1.0)
+  (defparameter *delta-double* 1d0)
   (defun update-now ()
-    (let* (
+    (let* ((previous-time *now-double*)
            (times (multiple-value-list (org.shirakumo.precise-time:get-precise-time)))
            (slack (* 100000 (truncate (/ (first times) 100000))))
            (seconds (- (first times) slack))
            (double-time 0d0)
            (double-time (+ double-time (/ (second times) 10000000) seconds)))
       (setf *now-double* double-time)
-      ;;(setf *now-double* (coerce (/ (get-internal-real-time) time-divisor) 'double-float))
       (setf *now* (coerce *now-double* 'single-float))
+      (setf *delta-double* (- *now-double* previous-time))
+      (setf *delta* (coerce *delta-double* 'single-float))
+      
       (update-sky-colour)
-      *now*)
-))
+      *now*)))
+
+(let* ()
+  (defparameter *now-input* (coerce (get-internal-real-time) 'single-float))
+  (defun update-now-input ()
+    (let* ((times (multiple-value-list (org.shirakumo.precise-time:get-precise-time)))
+           (slack (* 100000 (truncate (/ (first times) 100000))))
+           (seconds (- (first times) slack))
+           (double-time 0f0)
+           (double-time (+ double-time (/ (second times) 10000000) seconds)))
+      (setf *now-input* (coerce double-time 'single-float))
+      *now-input*)))
 
 (defun setup-projection-matrix ()
   (setf *projection-matrix* (rtg-math.projection:perspective (x (resolution (current-viewport)))
@@ -167,8 +179,8 @@
   (setup-projection-matrix)
   (make-chunks radius-x width *chunk-height* radius-z))
 
-(defparameter *delta* 1.0)
-(defparameter *delta-double* (coerce *delta* 'double-float))
+;;(defparameter *input-delta* 1d0)
+(defparameter *last-frame-time* 1d0)
 (defparameter *fps* 1)
 (defparameter *blending-params* (make-blending-params))
 
@@ -180,8 +192,6 @@
   (unless *rendering-paused?*
     (setf (clear-color) sky-colour)
     (clear)
-    (update-now)
-    (vox-cam:update-camera *camera* *delta*)
     (setup-projection-matrix)
     (with-blending *blending-params*
       ;;(render-night-sky)
@@ -230,34 +240,37 @@
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
 
+(defparameter *max-framerate* 60)
+
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 (if *rendering-paused?*
-                                     (progn
-                                       (step-host)
-                                       (livesupport:update-repl-link)
-                                       (sleep 0.01))
-                                     (let ((start-time (progn (update-now) *now-double*)))
+                                 (funcall render-loop-func)
+                                 (vox-cam:update-camera *camera* *delta*)
+                                 (sleep 0.00001)
+                                 (step-host)
+                                 (livesupport:update-repl-link)
+                                 (funcall inner-loader-thread-func)
+                                 )))
+
+(defparameter render-loop-func (lambda ()
+                                 (let* ((target-delta (/ 1d0 *max-framerate*))
+                                        (start-time (progn (update-now) *now-double*))
+                                        (time-since-last-frame (- start-time *last-frame-time*)))
+                                   (when (and (>= time-since-last-frame target-delta)
+                                              (not *rendering-paused?*))
+                                     (let ()
                                        (ignore-errors
                                         (setf (resolution (current-viewport))
                                               (get-cepl-context-surface-resolution)))
                                        (step-rendering)
-                                       (step-host)
-                                       (livesupport:update-repl-link)
-
-                                       (update-now)
-
-                                       (setf *delta-double* (- *now-double* start-time))
-                                       (setq my-stuff (list *delta-double* *now-double* start-time))
-                                       (setf *delta* (coerce *delta-double* 'single-float))
-                                       (setf *fps* (truncate (/ 1.0d0 (if (= *delta-double* 0.0)
-                                                                        0.00001d0
-                                                                        *delta-double*))))))
-                                 (funcall inner-loader-thread-func))))
+                                       (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
+                                       (setf *last-frame-time* *now-double*)
+                                       (update-now))))))
 
 (defun main ()
   (ignore-errors (cepl:repl 720 480))
   (init)
+  (setf (cepl.sdl2::vsync) nil)
   (loop (funcall main-loop-func)))
 
 (defun pause ()
