@@ -44,8 +44,8 @@
                             (aref sky-colour 2)
                             0.1)))
       (map-g #'basic-pipeline (buffer-stream chunk)
-             :cam-pos (vox-cam:cam-pos *camera*)
-             :cam-rot (vox-cam:cam-rot *camera*)
+             :cam-pos camera-current-pos
+             :cam-rot camera-current-rot
              :now *now*
              :proj *projection-matrix*
              :offset (offset chunk)
@@ -61,10 +61,15 @@
                                0.9)
              :sky-colour sky-colour))))
 
+(defparameter chunks-per-step-host 200)
+
 (defun render-chunks ()
-  (maphash (lambda (offset entry)
-             (render (car entry)))
-           *chunks-at-offsets-table*))
+  (let ((n-chunks-rendered 0))
+    (maphash (lambda (offset entry)
+               (render (car entry))
+               (when (= 0 (mod (incf n-chunks-rendered) chunks-per-step-host))
+                 (step-host)))
+             *chunks-at-offsets-table*)))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)

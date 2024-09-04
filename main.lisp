@@ -131,14 +131,17 @@
       *now*)))
 
 (let* ()
-  (defparameter *now-input* (coerce (get-internal-real-time) 'single-float))
+  (defparameter *now-input* (coerce (get-internal-real-time) 'double-float))
+  (defparameter *input-delta* 1d0)
   (defun update-now-input ()
-    (let* ((times (multiple-value-list (org.shirakumo.precise-time:get-precise-time)))
+    (let* ((prior-time *now-input*)
+           (times (multiple-value-list (org.shirakumo.precise-time:get-precise-time)))
            (slack (* 100000 (truncate (/ (first times) 100000))))
            (seconds (- (first times) slack))
-           (double-time 0f0)
+           (double-time 0d0)
            (double-time (+ double-time (/ (second times) 10000000) seconds)))
-      (setf *now-input* (coerce double-time 'single-float))
+      (setf *now-input* (coerce double-time 'double-float))
+      (setf *input-delta* (- *now-input* prior-time))
       *now-input*)))
 
 (defun setup-projection-matrix ()
@@ -188,15 +191,21 @@
   (setf (cepl.sdl2::vsync)
         (not (cepl.sdl2::vsync))))
 
+(defparameter camera-current-pos (vec3 0.0 0.0 0.0))
+(defparameter camera-current-rot (vec3 0.0 0.0 0.0))
+
+
 (defun step-rendering ()
   (unless *rendering-paused?*
     (setf (clear-color) sky-colour)
     (clear)
     (setup-projection-matrix)
+    (setf camera-current-pos (vox-cam:cam-pos *camera*)
+          camera-current-rot (vox-cam:cam-rot *camera*))
     (with-blending *blending-params*
       ;;(render-night-sky)
-      (render-chunks)
-      )
+      (render-chunks))
+    (step-host)
     (swap)))
 
 (defparameter inner-loader-thread-func (lambda ()
@@ -235,21 +244,37 @@
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free (first existing-chunk)))
                                                    (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
-                                                 (try-free-objects vert-array index-array))))))
+                                                 (try-free-objects vert-array index-array)))
+                                           ;;(update-now)
+                                           (step-host)
+                                           )))
 
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
 
-(defparameter *max-framerate* 60)
+(defparameter *max-framerate* 600)
+
+(defparameter prior-time 1)
+(defparameter main-loop-fps 123)
+(defparameter main-loop-delta 1.0)
+(defparameter main-loop-fps-buffer (make-array 1000))
+(defparameter main-loop-fps-buffer-index 0)
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
                                  (funcall render-loop-func)
-                                 (vox-cam:update-camera *camera* *delta*)
+                                 ;;(vox-cam:update-camera *camera* *delta*)
                                  (sleep 0.00001)
+                                 
                                  (step-host)
                                  (livesupport:update-repl-link)
                                  (funcall inner-loader-thread-func)
+                                 (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
+                                 (setf main-loop-delta (coerce (- *now-double* prior-time) 'double-float))
+                                 (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.000001 main-loop-delta))))
+                                 
+                                 (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
+                                 (setf prior-time *now-double*)
                                  )))
 
 (defparameter render-loop-func (lambda ()
@@ -266,6 +291,14 @@
                                        (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
                                        (setf *last-frame-time* *now-double*)
                                        (update-now))))))
+
+(defun update-inputs ()
+  (update-now-input)
+  (vox-cam:update-camera *camera* *input-delta*)
+  (sleep 0.0001))
+
+(defun start-input-thread ()
+  (bt:make-thread (lambda () (loop (update-inputs))) :name "input-update-thread"))
 
 (defun main ()
   (ignore-errors (cepl:repl 720 480))
