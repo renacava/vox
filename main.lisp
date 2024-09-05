@@ -103,11 +103,31 @@
      (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
      (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
      (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-     1.0)))
+     1.0)
+    (vec4 1.0 0.0 0.0 1.0)))
 
-(defpipeline-g basic-pipeline ()
+(defpipeline-g chunk-pipeline ()
   (vert-stage block-vert)
   (frag-stage :vec2 :float :vec4))
+
+
+(defun-g screen-plane-vert-stage ((vert g-pt))
+  (values (vec4 (pos vert) 1.0)
+          (pos vert)
+          (tex vert)))
+
+(defun-g screen-plane-frag-stage ((pos :vec3) (texture-coordinate :vec2) &uniform (tex-sampler :sampler-2d))
+  (vec4 (mod (aref pos 0) 1.0)
+        (mod (aref pos 1) 1.0)
+        (mod (aref pos 2) 1.0)
+        1.0)
+  (texture tex-sampler texture-coordinate)
+  )
+
+(defpipeline-g screen-plane-pipeline ()
+  (screen-plane-vert-stage g-pt)
+  (screen-plane-frag-stage :vec3 :vec2))
+
 
 (let* ((time-divisor (coerce (/ internal-time-units-per-second (/ 1.0 1.0)) 'double-float)))
   (declare (type double-float time-divisor))
@@ -170,6 +190,38 @@
 (defparameter *transform-feedback-array* nil)
 (defparameter *transform-feedback-stream* nil)
 
+(defparameter render-thread-context nil)
+(defparameter render-fbo nil)
+(defparameter render-fbo-tex nil)
+(defparameter render-fbo-sampler nil)
+(defparameter render-fbo-sampler-lock (bt:make-lock "fbo-sampler-lock"))
+
+(defun init-render-thread ()
+  (unless render-thread-context
+    (setf render-thread-context (make-context-shared-with-current-context)))
+  (bt:make-thread (lambda ()
+                    (with-cepl-context (ctx render-thread-context)
+                      (try-free-objects render-fbo render-fbo-tex render-fbo-sampler)
+                      (with-paused-rendering
+                        (resolve-textures))
+                      (setf render-fbo (make-fbo 0)
+                            render-fbo-tex (attachment-tex render-fbo 0)
+                            render-fbo-sampler (sample render-fbo-tex))
+                      ;;(make-chunks radius-x width *chunk-height* radius-z)
+                      (loop (funcall fbo-render-loop-func))))
+                  :name "rendering-thread"))
+
+
+(defparameter screen-plane (list (list (vec3 -1.0 -1.0 0.0) (vec2 0.0 0.0))
+                                 (list (vec3 1.0 -1.0 0.0) (vec2 1.0 0.0))
+                                 (list (vec3 1.0 1.0 0.0) (vec2 1.0 1.0))
+                                 (list (vec3 -1.0 1.0 0.0) (vec2 0.0 1.0))))
+
+(defparameter screen-plane-indices (vector 0 1 2 0 2 3))
+
+(defparameter screen-plane-vert-array nil)
+(defparameter screen-plane-index-array nil)
+(defparameter screen-plane-buffer-stream nil)
 (defun init (&optional (width *chunk-width*) (radius-x 8) (radius-z radius-x))
   ;; (unless *transform-feedback-array*
   ;;   (setf *transform-feedback-array* (make-gpu-array nil :element-type :vec3 :dimensions 1000)))
@@ -177,10 +229,14 @@
   ;;   (setf *transform-feedback-stream* (make-transform-feedback-stream *transform-feedback-array*)))
   (setf (surface-title (current-surface)) "vox")
   (sdl2:set-relative-mouse-mode t)
-  (with-paused-rendering
-    (resolve-textures))
   (setup-projection-matrix)
-  (make-chunks radius-x width *chunk-height* radius-z))
+  (try-free-objects screen-plane-index-array screen-plane-vert-array screen-plane-buffer-stream)
+  (setf screen-plane-vert-array (make-gpu-array screen-plane :element-type 'g-pt)
+        screen-plane-index-array (make-gpu-array screen-plane-indices :element-type :uint)
+        screen-plane-buffer-stream (make-buffer-stream screen-plane-vert-array :index-array screen-plane-index-array))
+  ;;(init-render-thread)
+  ;;(make-chunks radius-x width *chunk-height* radius-z)
+  )
 
 ;;(defparameter *input-delta* 1d0)
 (defparameter *last-frame-time* 1d0)
@@ -194,26 +250,181 @@
 (defparameter camera-current-pos (vec3 0.0 0.0 0.0))
 (defparameter camera-current-rot (vec3 0.0 0.0 0.0))
 
+(defparameter *vert-gpu-array* nil)
+(defparameter *vert-gpu-index-array* nil)
+(defparameter *vert-array-buffer-stream* nil)
+(defparameter *projection-matrix* nil)
+;;(defparameter *transform-feedback-gpu-array* nil)
+;;(defparameter *transform-feedback-stream* nil)
+
+(defparameter cube-1 (list (vec3 0.0 1.0 0.0) ;;0   FRONT
+                           (vec3 0.0 0.0 0.0) ;;1
+                           (vec3 1.0 0.0 0.0) ;;2
+                           (vec3 1.0 1.0 0.0) ;;3
+
+                           (vec3 0.0 1.0 1.0) ;;4   BACK
+                           (vec3 1.0 1.0 1.0) ;;5
+                           (vec3 1.0 0.0 1.0) ;;6
+                           (vec3 0.0 0.0 1.0) ;;7
+
+                           (vec3 0.0 1.0 0.0) ;;8   LEFT
+                           (vec3 0.0 0.0 0.0) ;;9
+                           (vec3 0.0 0.0 1.0) ;;1.00
+                           (vec3 0.0 1.0 1.0) ;;1.0
+
+                           (vec3 1.0 1.0 0.0) ;;1.02   RIGHT
+                           (vec3 1.0 1.0 1.0) ;;1.03
+                           (vec3 1.0 0.0 0.0) ;;1.04
+                           (vec3 1.0 0.0 1.0) ;;1.05
+
+                           (vec3 0.0 1.0 1.0) ;;1.06  TOP
+                           (vec3 0.0 1.0 0.0) ;;1.07
+                           (vec3 1.0 1.0 0.0) ;;1.08
+                           (vec3 1.0 1.0 1.0) ;;1.09
+
+                           (vec3 0.0 0.0 1.0) ;;20  BOTTOM
+                           (vec3 1.0 0.0 0.0) ;;21.0
+                           (vec3 0.0 0.0 0.0) ;;22
+                           (vec3 1.0 0.0 1.0) ;;23
+                           ))
+
+(defun-g basic-vert-stage ((vert :vec3)
+                     &uniform
+                     (now :float)
+                     (proj :mat4)
+                     (rot :vec3))
+  (let* ((pos (* (rtg-math.matrix4:rotation-from-euler rot) (vec4 vert 1)))
+         (col (if (or (isinf (aref pos 0))
+                      (isinf (aref pos 1))
+                      (isinf (aref pos 2)))
+                  (vec3 1.0 0.0 0.0)
+                  (vec3 0.0 0.0 1.0)))
+         (pos (+ pos (vec4 (* 2 (sin now)) (* 3 (cos now)) -5 0))))
+    (values (* proj pos)
+            
+            (vec3 (aref pos 0)
+                  (aref pos 1)
+                  (aref pos 2))
+            (:feedback :flat (ivec4 (int (aref pos 0))
+                                    (int (aref pos 1))
+                                    (int (aref pos 2))
+                                    (int (aref pos 3)))))))
+
+(defun-g basic-frag-stage ((col :vec3) (my-ivec3 :ivec4))
+  (let ((col (vec4 (mod (aref col 0) 1.0)
+                   (mod (aref col 1) 1.0)
+                   (mod (aref col 2) 1.0)
+                   1.0)))
+    col))
+
+(defpipeline-g basic-pipeline ()
+  (basic-vert-stage :vec3)
+  (basic-frag-stage :vec3 :ivec4))
+
+(defun step-fbo-rendering ()
+  (unless *rendering-paused?*
+    ;;(setf (clear-color) sky-colour)
+    (unless *vert-gpu-array*
+      (setf *vert-gpu-array* (setf *vert-gpu-array* (make-gpu-array
+                                                     cube-1
+                                                     :element-type :vec3))))
+    (unless *vert-gpu-index-array*
+      (setf *vert-gpu-index-array* (make-gpu-array (list 2 1 0 3 2 0
+                                                         6 5 4 7 6 4
+                                                         9 10 8 10 11 8
+                                                         15 14 12 13 15 12
+                                                         18 17 16 19 18 16
+                                                         22 21 20 21 23 20)
+                                                   :element-type :uint)))
+    (unless *vert-array-buffer-stream*
+      (setf *vert-array-buffer-stream* (make-buffer-stream *vert-gpu-array* :index-array *vert-gpu-index-array*)))
+    
+
+    ;; (bt:with-lock-held (render-fbo-sampler-lock)
+    ;;   )
+    (funcall inner-loader-thread-func)
+    (with-fbo-bound (render-fbo)
+      (with-blending *blending-params*
+        (setup-projection-matrix)
+        (setf camera-current-pos (vox-cam:cam-pos *camera*)
+              camera-current-rot (vox-cam:cam-rot *camera*))
+        (clear)
+        ;;(render-night-sky)
+        ;;(render-chunks)
+        ;; (let* ((chunk (gethash `(0 0 0) *chunks-at-offsets-table*)))
+        ;;   (when chunk
+        ;;     (render (first chunk))))
+
+        ;;(map-g #'basic-pipeline *vert-array-buffer-stream*)
+        (map-g #'basic-pipeline *vert-array-buffer-stream*
+               :now (float *now*)
+               :proj *projection-matrix*
+               :rot (v! (* 90 0.03 *now*) (* 90 0.02 *now*) (* 90 0.01 *now*))
+               )
+        
+        (let ((chunk (first (gethash `(0 0 0) *chunks-at-offsets-table*)))
+              (light-level (max (aref sky-colour 0)
+                                (aref sky-colour 1)
+                                (aref sky-colour 2)
+                                0.1)))
+          (map-g #'chunk-pipeline (buffer-stream chunk)
+                 :cam-pos camera-current-pos
+                 :cam-rot camera-current-rot
+                 :now *now*
+                 :proj *projection-matrix*
+                 :offset (offset chunk)
+                 :chunk-width 16
+                 :chunk-height 128
+                 ;;:atlas-sampler *texture-atlas-sampler*
+                 ;;:atlas-size *texture-atlas-size*
+                 ;; :skylight-colour (lerp-vec3
+                 ;;                   (vec3 (aref sky-colour 0)
+                 ;;                         (aref sky-colour 1)
+                 ;;                         (aref sky-colour 2))
+                 ;;                   (vec3 light-level light-level light-level)
+                 ;;                   0.9)
+                 ;; :sky-colour sky-colour
+                 ))
+        
+        (gl:finish)))
+    
+    ;; (step-host)
+    ;; (swap)
+    ))
 
 (defun step-rendering ()
   (unless *rendering-paused?*
-    (setf (clear-color) sky-colour)
-    (clear)
-    (setup-projection-matrix)
-    (setf camera-current-pos (vox-cam:cam-pos *camera*)
-          camera-current-rot (vox-cam:cam-rot *camera*))
-    (with-blending *blending-params*
-      ;;(render-night-sky)
-      (render-chunks))
-    (step-host)
-    (swap)))
+;;    (setf (clear-color) sky-colour)
+    ;; (clear)
+    ;; ;; (setup-projection-matrix)
+    ;; ;; (setf camera-current-pos (vox-cam:cam-pos *camera*)
+    ;; ;;       camera-current-rot (vox-cam:cam-rot *camera*))
+    ;; ;; (with-blending *blending-params*
+    ;; ;;   ;;(render-night-sky)
+    ;; ;;   (render-chunks))
+    ;; (bt:with-lock-held)
+    ;; (swap)
+
+    ;; (step-host)
+    (when render-fbo-sampler
+      ;; (bt:with-lock-held (render-fbo-sampler-lock)
+      ;;   )
+      (clear)
+      (map-g #'screen-plane-pipeline screen-plane-buffer-stream
+             :tex-sampler render-fbo-sampler)
+      (swap)
+      )
+    
+    
+    
+    ))
 
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
-                                               (maphash (lambda (offset entry)
-                                                          (try-free (car entry)))
-                                                        *chunks-at-offsets-table*)
+                                               ;; (maphash (lambda (offset entry)
+                                               ;;            (try-free (car entry)))
+                                               ;;          *chunks-at-offsets-table*)
                                                (clrhash *chunks-at-offsets-table*)
                                                (setf chunks-queued-to-be-freed? nil)))
                                          
@@ -229,7 +440,8 @@
                                                                    (make-buffer-stream
                                                                     vert-array
                                                                     :index-array index-array
-                                                                    :retain-arrays nil)))
+                                                                    ;;:retain-arrays nil
+                                                                    )))
                                                   (chunk (when buffer-stream
                                                            (make-instance 'chunk
                                                                           :width width
@@ -238,21 +450,22 @@
                                                                           :vert-array vert-array
                                                                           :index-array index-array
                                                                           :buffer-stream buffer-stream))))
-                                             (try-free-objects (first mesh-data) (second mesh-data))
+                                             ;;(try-free-objects (first mesh-data) (second mesh-data))
                                              (if chunk
                                                  (let* ((offset (second queued-chunk))
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free (first existing-chunk)))
                                                    (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
-                                                 (try-free-objects vert-array index-array)))
+                                                 ;;(try-free-objects vert-array index-array)
+                                                 ))
                                            ;;(update-now)
-                                           (step-host)
+                                           ;;(step-host)
                                            )))
 
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
 
-(defparameter *max-framerate* 600)
+(defparameter *max-framerate* 60)
 
 (defparameter prior-time 1)
 (defparameter main-loop-fps 123)
@@ -262,20 +475,34 @@
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 (funcall render-loop-func)
+                                 ;;(funcall render-loop-func)
                                  ;;(vox-cam:update-camera *camera* *delta*)
-                                 (sleep 0.00001)
                                  
+                                 
+                                 
+
+                                 
+                                 ;;(funcall inner-loader-thread-func)
+                                 (step-rendering)
                                  (step-host)
+                                 (update-inputs)
                                  (livesupport:update-repl-link)
-                                 (funcall inner-loader-thread-func)
-                                 (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
-                                 (setf main-loop-delta (coerce (- *now-double* prior-time) 'double-float))
-                                 (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.000001 main-loop-delta))))
+                                 (sleep 0.0001)
+                                 ;; (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
+                                 ;; (setf main-loop-delta (coerce (- *now-double* prior-time) 'double-float))
+                                 ;; (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.000001 main-loop-delta))))
                                  
-                                 (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
-                                 (setf prior-time *now-double*)
+                                 ;; (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
+                                 ;; (setf prior-time *now-double*)
                                  )))
+
+(defparameter fbo-render-loop-func (lambda ()
+                                     (livesupport:continuable
+                                       ;;(funcall render-loop-func)
+                                       ;;(funcall inner-loader-thread-func)
+                                       (update-now)
+                                       (step-fbo-rendering)
+                                       (sleep 0.001))))
 
 (defparameter render-loop-func (lambda ()
                                  (let* ((target-delta (/ 1d0 *max-framerate*))
@@ -284,21 +511,25 @@
                                    (when (and (>= time-since-last-frame target-delta)
                                               (not *rendering-paused?*))
                                      (let ()
-                                       (ignore-errors
-                                        (setf (resolution (current-viewport))
-                                              (get-cepl-context-surface-resolution)))
-                                       (step-rendering)
+                                       ;; (ignore-errors
+                                       ;;  (setf (resolution (current-viewport))
+                                       ;;        (get-cepl-context-surface-resolution)))
+                                       ;;(step-rendering)
+                                       (step-fbo-rendering)
                                        (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
                                        (setf *last-frame-time* *now-double*)
-                                       (update-now))))))
+                                       
+                                       ;;(update-now)
+                                       )))))
 
 (defun update-inputs ()
   (update-now-input)
   (vox-cam:update-camera *camera* *input-delta*)
-  (sleep 0.0001))
+  ;;(sleep 0.0001)
+  )
 
-(defun start-input-thread ()
-  (bt:make-thread (lambda () (loop (update-inputs))) :name "input-update-thread"))
+;; (defun start-input-thread ()
+;;   (bt:make-thread (lambda () (loop (update-inputs))) :name "input-update-thread"))
 
 (defun main ()
   (ignore-errors (cepl:repl 720 480))
