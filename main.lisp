@@ -96,15 +96,21 @@
            )
          (fog-colour (* skylight-colour 0.8)))
 
-    (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
-    (setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
-    
-    (vec4
-     (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
-     (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
-     (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-     1.0)
-    (vec4 1.0 0.0 0.0 1.0)))
+    ;;(setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
+    ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
+    ;;(vec4 texture-sample 1.0)
+    ;;texture-sample
+    ;; (vec4
+    ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
+    ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
+    ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
+    ;;  1.0)
+    (vec4 (mod (aref pos 0) 1.0)
+          (mod (aref pos 1) 1.0)
+          (mod (aref pos 2) 1.0)
+          (aref pos 3))
+    ;;(vec4 1.0 0.0 0.0 1.0)
+    ))
 
 (defpipeline-g chunk-pipeline ()
   (vert-stage block-vert)
@@ -204,10 +210,12 @@
                       (try-free-objects render-fbo render-fbo-tex render-fbo-sampler)
                       (with-paused-rendering
                         (resolve-textures))
-                      (setf render-fbo (make-fbo 0)
+                      (setf render-fbo (make-fbo 0 :d)
                             render-fbo-tex (attachment-tex render-fbo 0)
                             render-fbo-sampler (sample render-fbo-tex))
                       ;;(make-chunks radius-x width *chunk-height* radius-z)
+                      (setf (cepl:depth-test-function) #'<)
+                      (setq my-depth-func (cepl:depth-test-function))
                       (loop (funcall fbo-render-loop-func))))
                   :name "rendering-thread"))
 
@@ -342,10 +350,12 @@
 
     ;; (bt:with-lock-held (render-fbo-sampler-lock)
     ;;   )
-    (funcall inner-loader-thread-func)
+    
+    ;;(gl:enable :depth-test)
+    ;;(setf (cepl:depth-test-function render-thread-context) #'<)
     (with-fbo-bound (render-fbo)
       (with-blending *blending-params*
-        (setup-projection-matrix)
+        ;;(setup-projection-matrix)
         (setf camera-current-pos (vox-cam:cam-pos *camera*)
               camera-current-rot (vox-cam:cam-rot *camera*))
         (clear)
@@ -362,29 +372,7 @@
                :rot (v! (* 90 0.03 *now*) (* 90 0.02 *now*) (* 90 0.01 *now*))
                )
         
-        (let ((chunk (first (gethash `(0 0 0) *chunks-at-offsets-table*)))
-              (light-level (max (aref sky-colour 0)
-                                (aref sky-colour 1)
-                                (aref sky-colour 2)
-                                0.1)))
-          (map-g #'chunk-pipeline (buffer-stream chunk)
-                 :cam-pos camera-current-pos
-                 :cam-rot camera-current-rot
-                 :now *now*
-                 :proj *projection-matrix*
-                 :offset (offset chunk)
-                 :chunk-width 16
-                 :chunk-height 128
-                 ;;:atlas-sampler *texture-atlas-sampler*
-                 ;;:atlas-size *texture-atlas-size*
-                 ;; :skylight-colour (lerp-vec3
-                 ;;                   (vec3 (aref sky-colour 0)
-                 ;;                         (aref sky-colour 1)
-                 ;;                         (aref sky-colour 2))
-                 ;;                   (vec3 light-level light-level light-level)
-                 ;;                   0.9)
-                 ;; :sky-colour sky-colour
-                 ))
+        (render-chunks)
         
         (gl:finish)))
     
@@ -406,6 +394,10 @@
     ;; (swap)
 
     ;; (step-host)
+    (ignore-errors
+     (setf (resolution (current-viewport))
+           (get-cepl-context-surface-resolution)))
+    (setup-projection-matrix)
     (when render-fbo-sampler
       ;; (bt:with-lock-held (render-fbo-sampler-lock)
       ;;   )
@@ -422,9 +414,9 @@
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
                                              (with-paused-rendering
-                                               ;; (maphash (lambda (offset entry)
-                                               ;;            (try-free (car entry)))
-                                               ;;          *chunks-at-offsets-table*)
+                                               (maphash (lambda (offset entry)
+                                                          (try-free (car entry)))
+                                                        *chunks-at-offsets-table*)
                                                (clrhash *chunks-at-offsets-table*)
                                                (setf chunks-queued-to-be-freed? nil)))
                                          
@@ -440,7 +432,7 @@
                                                                    (make-buffer-stream
                                                                     vert-array
                                                                     :index-array index-array
-                                                                    ;;:retain-arrays nil
+                                                                    :retain-arrays nil
                                                                     )))
                                                   (chunk (when buffer-stream
                                                            (make-instance 'chunk
@@ -450,13 +442,13 @@
                                                                           :vert-array vert-array
                                                                           :index-array index-array
                                                                           :buffer-stream buffer-stream))))
-                                             ;;(try-free-objects (first mesh-data) (second mesh-data))
+                                             (try-free-objects (first mesh-data) (second mesh-data))
                                              (if chunk
                                                  (let* ((offset (second queued-chunk))
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free (first existing-chunk)))
                                                    (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
-                                                 ;;(try-free-objects vert-array index-array)
+                                                 (try-free-objects vert-array index-array)
                                                  ))
                                            ;;(update-now)
                                            ;;(step-host)
@@ -488,21 +480,24 @@
                                  (update-inputs)
                                  (livesupport:update-repl-link)
                                  (sleep 0.0001)
-                                 ;; (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
-                                 ;; (setf main-loop-delta (coerce (- *now-double* prior-time) 'double-float))
-                                 ;; (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.000001 main-loop-delta))))
+                                 (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
+                                 (setf main-loop-delta (coerce (- *now-input* prior-time) 'double-float))
+                                 (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.00000001 main-loop-delta))))
                                  
-                                 ;; (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
-                                 ;; (setf prior-time *now-double*)
+                                 (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
+                                 (setf prior-time *now-input*)
                                  )))
 
 (defparameter fbo-render-loop-func (lambda ()
                                      (livesupport:continuable
                                        ;;(funcall render-loop-func)
                                        ;;(funcall inner-loader-thread-func)
-                                       (update-now)
-                                       (step-fbo-rendering)
-                                       (sleep 0.001))))
+                                       ;; (update-now)
+                                       ;; (step-fbo-rendering)
+                                       ;;(sleep 0.001)
+                                       (funcall render-loop-func)
+                                       (funcall inner-loader-thread-func)
+                                       )))
 
 (defparameter render-loop-func (lambda ()
                                  (let* ((target-delta (/ 1d0 *max-framerate*))
@@ -511,10 +506,6 @@
                                    (when (and (>= time-since-last-frame target-delta)
                                               (not *rendering-paused?*))
                                      (let ()
-                                       ;; (ignore-errors
-                                       ;;  (setf (resolution (current-viewport))
-                                       ;;        (get-cepl-context-surface-resolution)))
-                                       ;;(step-rendering)
                                        (step-fbo-rendering)
                                        (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
                                        (setf *last-frame-time* *now-double*)
@@ -535,6 +526,7 @@
   (ignore-errors (cepl:repl 720 480))
   (init)
   (setf (cepl.sdl2::vsync) nil)
+  (init-render-thread)
   (loop (funcall main-loop-func)))
 
 (defun pause ()

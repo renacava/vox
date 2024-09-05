@@ -43,23 +43,42 @@
                             (aref sky-colour 1)
                             (aref sky-colour 2)
                             0.1)))
+      ;; (map-g #'chunk-pipeline (buffer-stream chunk)
+      ;;        :cam-pos camera-current-pos
+      ;;        :cam-rot camera-current-rot
+      ;;        :now *now*
+      ;;        :proj *projection-matrix*
+      ;;        :offset (offset chunk)
+      ;;        :chunk-width (width chunk)
+      ;;        :chunk-height (height chunk)
+      ;;        :atlas-sampler *texture-atlas-sampler*
+      ;;        :atlas-size *texture-atlas-size*
+      ;;        :skylight-colour (lerp-vec3
+      ;;                          (vec3 (aref sky-colour 0)
+      ;;                                (aref sky-colour 1)
+      ;;                                (aref sky-colour 2))
+      ;;                          (vec3 light-level light-level light-level)
+      ;;                          0.9)
+      ;;        :sky-colour sky-colour)
       (map-g #'chunk-pipeline (buffer-stream chunk)
              :cam-pos camera-current-pos
              :cam-rot camera-current-rot
              :now *now*
              :proj *projection-matrix*
              :offset (offset chunk)
-             :chunk-width (width chunk)
-             :chunk-height (height chunk)
+             :chunk-width 16
+             :chunk-height 128
              :atlas-sampler *texture-atlas-sampler*
              :atlas-size *texture-atlas-size*
-             :skylight-colour (lerp-vec3
-                               (vec3 (aref sky-colour 0)
-                                     (aref sky-colour 1)
-                                     (aref sky-colour 2))
-                               (vec3 light-level light-level light-level)
-                               0.9)
-             :sky-colour sky-colour))))
+             ;; :skylight-colour (lerp-vec3
+             ;;                   (vec3 (aref sky-colour 0)
+             ;;                         (aref sky-colour 1)
+             ;;                         (aref sky-colour 2))
+             ;;                   (vec3 light-level light-level light-level)
+             ;;                   0.9)
+             ;; :sky-colour sky-colour
+             )
+      )))
 
 ;;(defparameter chunks-per-step-host 200)
 
@@ -69,7 +88,9 @@
                (render (car entry))
                ;; (when (= 0 (mod (incf n-chunks-rendered) chunks-per-step-host))
                ;;   (step-host))
-             *chunks-at-offsets-table*))))
+               )
+             *chunks-at-offsets-table*)
+    ))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setup-lparallel-kernel)
