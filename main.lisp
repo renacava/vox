@@ -12,7 +12,7 @@
             ,@body)
        (setf *rendering-paused?* prior-state))))
 
-(defun setup-lparallel-kernel (&optional (worker-threads 4))
+(defun setup-lparallel-kernel (&optional (worker-threads 1))
   (unless lparallel:*kernel*
     (setf lparallel:*kernel* (lparallel:make-kernel worker-threads))))
 
@@ -90,37 +90,40 @@
 
 
 (defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (texture-atlas-ssbo ssbo-struct :ssbo) (skylight-colour :vec3) (sky-colour :vec4))
+  ;; (let* (
+  ;;        )
+  ;;   my-data)
   (let* ((uv-index (int (mod (* 1 (2d-to-1d-g (int (* 48 (/ (aref uv 0) 1)))
                                               (int (* 48 (/ (aref uv 1) 1)))
                                               48))
                              2304)))
-         (my-data (/ (aref (data texture-atlas-ssbo) uv-index) 255.0)))
-    my-data)
-  ;; (let* ((texture-sample (texture atlas-sampler uv))
-  ;;        (sunlight-mult (face-light-float-to-multiplier face-light-float))
-  ;;        (fog-mult (min 1 (/ 1 (* (abs (aref pos 2)) 0.01)))
-  ;;          )
-  ;;        (fog-colour (* skylight-colour 0.8)))
+         (texture-sample (/ (aref (data texture-atlas-ssbo) uv-index) 255.0))
+         ;;(texture-sample (texture atlas-sampler uv))
+         (sunlight-mult (face-light-float-to-multiplier face-light-float))
+         (fog-mult (min 1 (/ 1 (* (abs (aref pos 2)) 0.01)))
+           )
+         (fog-colour (* skylight-colour 0.8)))
 
-  ;;   (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
-  ;;   ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
-  ;;   ;;(vec4 texture-sample 1.0)
-  ;;   ;;texture-sample
-  ;;   ;; (vec4
-  ;;   ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
-  ;;   ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
-  ;;   ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-  ;;   ;;  1.0)
-  ;;   ;; (vec4 (mod (aref pos 0) 1.0)
-  ;;   ;;       (mod (aref pos 1) 1.0)
-  ;;   ;;       (mod (aref pos 2) 1.0)
-  ;;   ;;       (aref pos 3))
-  ;;   (vec4 (mod (aref texture-sample 0) 1.0)
-  ;;         (mod (aref texture-sample 1) 1.0)
-  ;;         (mod (aref texture-sample 2) 1.0)
-  ;;         1.0)
-  ;;   (vec4 1.0 0.0 0.0 1.0)
-  ;;   )
+    (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
+    ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
+    ;;(vec4 texture-sample 1.0)
+    ;;texture-sample
+    ;; (vec4
+    ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
+    ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
+    ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
+    ;;  1.0)
+    ;; (vec4 (mod (aref pos 0) 1.0)
+    ;;       (mod (aref pos 1) 1.0)
+    ;;       (mod (aref pos 2) 1.0)
+    ;;       (aref pos 3))
+    (vec4 (mod (aref texture-sample 0) 1.0)
+          (mod (aref texture-sample 1) 1.0)
+          (mod (aref texture-sample 2) 1.0)
+          1.0)
+    (vec4 1.0 0.0 0.0 1.0)
+    texture-sample
+    )
   
   )
 
@@ -369,20 +372,21 @@
              (get-cepl-context-surface-resolution)))
       (setup-projection-matrix)
       (setf (clear-color) sky-colour)
+      (clear)
       (setf camera-current-pos (vox-cam:cam-pos *camera*)
             camera-current-rot (vox-cam:cam-rot *camera*))
-      (clear)
       (render-chunks)
       (swap))))
 
 
 (defparameter inner-loader-thread-func (lambda ()
-                                         (if chunks-queued-to-be-freed?
-                                             (with-paused-rendering
-                                               (maphash (lambda (offset entry)
-                                                          (try-free (car entry)))
-                                                        *chunks-at-offsets-table*)
-                                               (setf chunks-queued-to-be-freed? nil)))
+                                         (when chunks-queued-to-be-freed?
+                                           (maphash (lambda (offset entry)
+                                                      (try-free (car entry)))
+                                                    *chunks-at-offsets-table*)
+                                           (clrhash *chunks-at-offsets-table*)
+                                           (setf chunks-queued-to-be-freed? nil)
+                                           )
                                          
                                          (when queued-chunks
                                            (let* ((queued-chunk (pop queued-chunks))
@@ -414,10 +418,7 @@
                                                    (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
                                                  
                                                  (try-free-objects vert-array index-array)
-                                                 ))
-                                           ;;(update-now)
-                                           ;;(step-host)
-                                           )))
+                                                 )))))
 
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))

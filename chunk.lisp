@@ -1,7 +1,7 @@
 (in-package #:vox)
 
 (defparameter queued-chunks nil)
-(defparameter chunk-queue-max-size 16)
+(defparameter chunk-queue-max-size 1)
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
@@ -41,59 +41,43 @@
 
 (defmethod render ((chunk chunk))
   (unless *rendering-paused?*
-    (let ((light-level (max (aref sky-colour 0)
-                            (aref sky-colour 1)
-                            (aref sky-colour 2)
-                            0.1)))
-      ;; (map-g #'chunk-pipeline (buffer-stream chunk)
-      ;;        :cam-pos camera-current-pos
-      ;;        :cam-rot camera-current-rot
-      ;;        :now *now*
-      ;;        :proj *projection-matrix*
-      ;;        :offset (offset chunk)
-      ;;        :chunk-width (width chunk)
-      ;;        :chunk-height (height chunk)
-      ;;        :atlas-sampler *texture-atlas-sampler*
-      ;;        :atlas-size *texture-atlas-size*
-      ;;        :skylight-colour (lerp-vec3
-      ;;                          (vec3 (aref sky-colour 0)
-      ;;                                (aref sky-colour 1)
-      ;;                                (aref sky-colour 2))
-      ;;                          (vec3 light-level light-level light-level)
-      ;;                          0.9)
-      ;;        :sky-colour sky-colour)
-      (map-g #'chunk-pipeline (buffer-stream chunk)
-             :cam-pos camera-current-pos
-             :cam-rot camera-current-rot
-             :now *now*
-             :proj *projection-matrix*
-             :offset (offset chunk)
-             :chunk-width 16
-             :chunk-height 128
-             ;;:atlas-sampler *texture-atlas-sampler*
-             :texture-atlas-ssbo texture-atlas-ssbo
-             :atlas-size *texture-atlas-size*
-             :skylight-colour (lerp-vec3
-                               (vec3 (aref sky-colour 0)
-                                     (aref sky-colour 1)
-                                     (aref sky-colour 2))
-                               (vec3 light-level light-level light-level)
-                               0.9)
-             :sky-colour sky-colour
-             )
-      )))
+    (let ((buffer-stream (buffer-stream chunk)))
+      (when (and buffer-stream
+                 (< 0 (buffer-stream-length buffer-stream))))
+      (let ((light-level (max (aref sky-colour 0)
+                              (aref sky-colour 1)
+                              (aref sky-colour 2)
+                              0.1)))
+
+        (map-g #'chunk-pipeline buffer-stream
+               :cam-pos camera-current-pos
+               :cam-rot camera-current-rot
+               :now *now*
+               :proj *projection-matrix*
+               :offset (offset chunk)
+               :chunk-width 16
+               :chunk-height 128
+               :texture-atlas-ssbo texture-atlas-ssbo
+               :atlas-size *texture-atlas-size*
+               :skylight-colour (lerp-vec3
+                                 (vec3 (aref sky-colour 0)
+                                       (aref sky-colour 1)
+                                       (aref sky-colour 2))
+                                 (vec3 light-level light-level light-level)
+                                 0.9)
+               :sky-colour sky-colour
+               )
+        ))
+    
+    ))
 
 ;;(defparameter chunks-per-step-host 200)
 
 (defun render-chunks ()
   (let ((n-chunks-rendered 0))
-    (bt:with-lock-held (chunk-table-lock)
-      (maphash (lambda (offset entry)
-                 (render (car entry))
-                 ;; (when (= 0 (mod (incf n-chunks-rendered) chunks-per-step-host))
-                 ;;   (step-host))
-                 )
-               *chunks-at-offsets-table*))
+    (maphash (lambda (offset entry)
+               (render (car entry)))
+             *chunks-at-offsets-table*)
     
     ))
 
