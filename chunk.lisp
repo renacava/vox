@@ -41,36 +41,33 @@
   (mapcar #'render things-to-render))
 
 (defmethod render ((chunk chunk))
-  (unless *rendering-paused?*
-    (let ((buffer-stream (buffer-stream chunk)))
-      (when (and buffer-stream
-                 (< 0 (buffer-stream-length buffer-stream))))
-      (let ((light-level (max (aref sky-colour 0)
-                              (aref sky-colour 1)
-                              (aref sky-colour 2)
-                              0.1)))
+  (let ((buffer-stream (buffer-stream chunk)))
+    (when (and buffer-stream
+               (< 0 (buffer-stream-length buffer-stream))))
+    (let ((light-level (max (aref sky-colour 0)
+                            (aref sky-colour 1)
+                            (aref sky-colour 2)
+                            0.1)))
 
-        (map-g #'chunk-pipeline buffer-stream
-               :cam-pos camera-current-pos
-               :cam-rot camera-current-rot
-               :now *now*
-               :proj *projection-matrix*
-               :offset (offset chunk)
-               :chunk-width 16
-               :chunk-height 128
-               :texture-atlas-ssbo texture-atlas-ssbo
-               :atlas-size *texture-atlas-size*
-               :skylight-colour (lerp-vec3
-                                 (vec3 (aref sky-colour 0)
-                                       (aref sky-colour 1)
-                                       (aref sky-colour 2))
-                                 (vec3 light-level light-level light-level)
-                                 0.9)
-               :sky-colour sky-colour
-               )
-        ))
-    
-    ))
+      (map-g #'chunk-pipeline buffer-stream
+             :cam-pos camera-current-pos
+             :cam-rot camera-current-rot
+             :now *now*
+             :proj *projection-matrix*
+             :offset (offset chunk)
+             :chunk-width 16
+             :chunk-height 128
+             :texture-atlas-ssbo texture-atlas-ssbo
+             :atlas-size *texture-atlas-size*
+             :skylight-colour (lerp-vec3
+                               (vec3 (aref sky-colour 0)
+                                     (aref sky-colour 1)
+                                     (aref sky-colour 2))
+                               (vec3 light-level light-level light-level)
+                               0.9)
+             :sky-colour sky-colour
+             )
+      )))
 
 ;;(defparameter chunks-per-step-host 200)
 
