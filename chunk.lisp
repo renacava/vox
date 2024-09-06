@@ -5,6 +5,7 @@
 (defparameter half-baked-chunks nil)
 (defparameter chunks-queued-to-be-freed? nil)
 (defparameter *chunks-at-offsets-table* (make-hash-table :test #'equal))
+(defparameter chunk-table-lock (bt:make-lock "chunk-table-lock"))
 
 (defclass chunk ()
   ((buffer-stream :initarg :buffer-stream
@@ -27,7 +28,8 @@
            :initform *chunk-height*)))
 
 (defmethod free ((chunk chunk))
-  (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*)
+  (bt:with-lock-held (chunk-table-lock)
+    (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*))
   (let* ((vert-array (vert-array chunk))
          (index-array (index-array chunk))
          (buffer-stream (buffer-stream chunk)))
@@ -68,15 +70,16 @@
              :offset (offset chunk)
              :chunk-width 16
              :chunk-height 128
-             :atlas-sampler *texture-atlas-sampler*
+             ;;:atlas-sampler *texture-atlas-sampler*
+             :texture-atlas-ssbo texture-atlas-ssbo
              :atlas-size *texture-atlas-size*
-             ;; :skylight-colour (lerp-vec3
-             ;;                   (vec3 (aref sky-colour 0)
-             ;;                         (aref sky-colour 1)
-             ;;                         (aref sky-colour 2))
-             ;;                   (vec3 light-level light-level light-level)
-             ;;                   0.9)
-             ;; :sky-colour sky-colour
+             :skylight-colour (lerp-vec3
+                               (vec3 (aref sky-colour 0)
+                                     (aref sky-colour 1)
+                                     (aref sky-colour 2))
+                               (vec3 light-level light-level light-level)
+                               0.9)
+             :sky-colour sky-colour
              )
       )))
 
@@ -84,12 +87,14 @@
 
 (defun render-chunks ()
   (let ((n-chunks-rendered 0))
-    (maphash (lambda (offset entry)
-               (render (car entry))
-               ;; (when (= 0 (mod (incf n-chunks-rendered) chunks-per-step-host))
-               ;;   (step-host))
-               )
-             *chunks-at-offsets-table*)
+    (bt:with-lock-held (chunk-table-lock)
+      (maphash (lambda (offset entry)
+                 (render (car entry))
+                 ;; (when (= 0 (mod (incf n-chunks-rendered) chunks-per-step-host))
+                 ;;   (step-host))
+                 )
+               *chunks-at-offsets-table*))
+    
     ))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
@@ -140,4 +145,5 @@
   (< chunk-queue-max-size (length queued-chunks)))
 
 (defun queue-chunk (mesh-data offset width height)
-  (push (list mesh-data offset width height) queued-chunks))
+  (push (list mesh-data offset width height) queued-chunks)
+  )

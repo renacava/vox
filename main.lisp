@@ -89,28 +89,40 @@
             pos)))
 
 
-(defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (atlas-sampler :sampler-2d) (skylight-colour :vec3) (sky-colour :vec4))
-  (let* ((texture-sample (texture atlas-sampler uv))
-         (sunlight-mult (face-light-float-to-multiplier face-light-float))
-         (fog-mult (min 1 (/ 1 (* (abs (aref pos 2)) 0.01)))
-           )
-         (fog-colour (* skylight-colour 0.8)))
+(defun-g frag-stage ((uv :vec2) (face-light-float :float) (pos :vec4) &uniform (texture-atlas-ssbo ssbo-struct :ssbo) (skylight-colour :vec3) (sky-colour :vec4))
+  (let* ((uv-index (int (mod (* 1 (2d-to-1d-g (int (* 48 (/ (aref uv 0) 1)))
+                                              (int (* 48 (/ (aref uv 1) 1)))
+                                              48))
+                             2304)))
+         (my-data (/ (aref (data texture-atlas-ssbo) uv-index) 255.0)))
+    my-data)
+  ;; (let* ((texture-sample (texture atlas-sampler uv))
+  ;;        (sunlight-mult (face-light-float-to-multiplier face-light-float))
+  ;;        (fog-mult (min 1 (/ 1 (* (abs (aref pos 2)) 0.01)))
+  ;;          )
+  ;;        (fog-colour (* skylight-colour 0.8)))
 
-    ;;(setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
-    ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
-    ;;(vec4 texture-sample 1.0)
-    ;;texture-sample
-    ;; (vec4
-    ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
-    ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
-    ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-    ;;  1.0)
-    (vec4 (mod (aref pos 0) 1.0)
-          (mod (aref pos 1) 1.0)
-          (mod (aref pos 2) 1.0)
-          (aref pos 3))
-    ;;(vec4 1.0 0.0 0.0 1.0)
-    ))
+  ;;   (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
+  ;;   ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
+  ;;   ;;(vec4 texture-sample 1.0)
+  ;;   ;;texture-sample
+  ;;   ;; (vec4
+  ;;   ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
+  ;;   ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
+  ;;   ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
+  ;;   ;;  1.0)
+  ;;   ;; (vec4 (mod (aref pos 0) 1.0)
+  ;;   ;;       (mod (aref pos 1) 1.0)
+  ;;   ;;       (mod (aref pos 2) 1.0)
+  ;;   ;;       (aref pos 3))
+  ;;   (vec4 (mod (aref texture-sample 0) 1.0)
+  ;;         (mod (aref texture-sample 1) 1.0)
+  ;;         (mod (aref texture-sample 2) 1.0)
+  ;;         1.0)
+  ;;   (vec4 1.0 0.0 0.0 1.0)
+  ;;   )
+  
+  )
 
 (defpipeline-g chunk-pipeline ()
   (vert-stage block-vert)
@@ -202,20 +214,51 @@
 (defparameter render-fbo-sampler nil)
 (defparameter render-fbo-sampler-lock (bt:make-lock "fbo-sampler-lock"))
 
+(defmacro setf-if-nil (place value)
+  `(unless ,place
+     (setf ,place ,value)))
+
+(defun load-texture-atlas-to-c-array ()
+  (or  (ignore-errors (dirt:load-image-to-texture "texture-atlas.png"))
+       (ignore-errors (dirt:load-image-to-texture "projects/vox/texture-atlas.png"))))
+
+(defparameter texture-atlas-image-data nil)
+(defparameter texture-atlas-c-array nil)
+(defparameter texture-atlas-gpu-array nil)
+(defparameter texture-atlas-ssbo nil)
+
 (defun init-render-thread ()
   (unless render-thread-context
     (setf render-thread-context (make-context-shared-with-current-context)))
   (bt:make-thread (lambda ()
                     (with-cepl-context (ctx render-thread-context)
-                      (try-free-objects render-fbo render-fbo-tex render-fbo-sampler)
-                      (with-paused-rendering
-                        (resolve-textures))
+                      (try-free-objects render-fbo render-fbo-tex render-fbo-sampler
+                                        texture-atlas-image-data texture-atlas-c-array texture-atlas-gpu-array
+                                        texture-atlas-ssbo)
+                      (setf texture-atlas-image-data nil
+                            texture-atlas-c-array nil
+                            texture-atlas-gpu-array nil
+                            texture-atlas-ssbo nil)
                       (setf render-fbo (make-fbo 0 :d)
                             render-fbo-tex (attachment-tex render-fbo 0)
                             render-fbo-sampler (sample render-fbo-tex))
                       ;;(make-chunks radius-x width *chunk-height* radius-z)
                       (setf (cepl:depth-test-function) #'<)
+                      (gl:enable :depth-test)
                       (setq my-depth-func (cepl:depth-test-function))
+
+                      (setf texture-atlas-image-data
+                                   (list
+                                    (list
+                                     (loop for row in (pull-g (load-texture-atlas-to-c-array))
+                                                                              append (mapcar #'v! row)))))
+                      (setf texture-atlas-c-array (make-c-array texture-atlas-image-data
+                                                                       :dimensions 1
+                                                                       :element-type 'ssbo-struct))
+                      (setf texture-atlas-gpu-array (make-gpu-array texture-atlas-c-array
+                                                                           :element-type 'ssbo-struct))
+                      (setf texture-atlas-ssbo (make-ssbo texture-atlas-gpu-array 'ssbo-struct))
+                      
                       (loop (funcall fbo-render-loop-func))))
                   :name "rendering-thread"))
 
@@ -258,9 +301,6 @@
 (defparameter camera-current-pos (vec3 0.0 0.0 0.0))
 (defparameter camera-current-rot (vec3 0.0 0.0 0.0))
 
-(defparameter *vert-gpu-array* nil)
-(defparameter *vert-gpu-index-array* nil)
-(defparameter *vert-array-buffer-stream* nil)
 (defparameter *projection-matrix* nil)
 ;;(defparameter *transform-feedback-gpu-array* nil)
 ;;(defparameter *transform-feedback-stream* nil)
@@ -296,6 +336,12 @@
                            (vec3 1.0 0.0 1.0) ;;23
                            ))
 
+(defstruct-g ssbo-struct
+  (data (:vec4 (2304)) :accessor data))
+
+(defun-g 2d-to-1d-g ((x :int) (y :int) (array-width :int))
+  (+ x (* y array-width)))
+
 (defun-g basic-vert-stage ((vert :vec3)
                      &uniform
                      (now :float)
@@ -309,107 +355,95 @@
                   (vec3 0.0 0.0 1.0)))
          (pos (+ pos (vec4 (* 2 (sin now)) (* 3 (cos now)) -5 0))))
     (values (* proj pos)
-            
-            (vec3 (aref pos 0)
-                  (aref pos 1)
-                  (aref pos 2))
-            (:feedback :flat (ivec4 (int (aref pos 0))
-                                    (int (aref pos 1))
-                                    (int (aref pos 2))
-                                    (int (aref pos 3)))))))
+            (vec3 (aref (* proj pos) 0)
+                  (aref (* proj pos) 1)
+                  (aref (* proj pos) 2)))))
 
-(defun-g basic-frag-stage ((col :vec3) (my-ivec3 :ivec4))
-  (let ((col (vec4 (mod (aref col 0) 1.0)
-                   (mod (aref col 1) 1.0)
-                   (mod (aref col 2) 1.0)
-                   1.0)))
-    col))
+(defun-g basic-frag-stage ((col :vec3) &uniform (texture-atlas-ssbo ssbo-struct :ssbo))
+  (let* ((col (vec4 (mod (aref col 0) 1.0)
+                    (mod (aref col 1) 1.0)
+                    (mod (aref col 2) 1.0)
+                    1.0))
+         (uv-index (int (mod (* 1 (2d-to-1d-g (int (* 48 (/ (aref col 0) 1)))
+                                              (int (* 48 (/ (aref col 1) 1)))
+                                              48))
+                             2304)))
+         (my-data (/ (aref (data texture-atlas-ssbo) uv-index) 255.0)))
+    my-data))
 
 (defpipeline-g basic-pipeline ()
   (basic-vert-stage :vec3)
-  (basic-frag-stage :vec3 :ivec4))
+  (basic-frag-stage :vec3))
+
+(defparameter *vert-gpu-array* nil)
+(defparameter *vert-gpu-index-array* nil)
+(defparameter *vert-array-buffer-stream* nil)
 
 (defun step-fbo-rendering ()
   (unless *rendering-paused?*
     ;;(setf (clear-color) sky-colour)
-    (unless *vert-gpu-array*
-      (setf *vert-gpu-array* (setf *vert-gpu-array* (make-gpu-array
-                                                     cube-1
-                                                     :element-type :vec3))))
-    (unless *vert-gpu-index-array*
-      (setf *vert-gpu-index-array* (make-gpu-array (list 2 1 0 3 2 0
-                                                         6 5 4 7 6 4
-                                                         9 10 8 10 11 8
-                                                         15 14 12 13 15 12
-                                                         18 17 16 19 18 16
-                                                         22 21 20 21 23 20)
-                                                   :element-type :uint)))
-    (unless *vert-array-buffer-stream*
-      (setf *vert-array-buffer-stream* (make-buffer-stream *vert-gpu-array* :index-array *vert-gpu-index-array*)))
+    ;; (setf-if-nil  *vert-gpu-array* (make-gpu-array cube-1 :element-type :vec3))
+    ;; (setf-if-nil *vert-gpu-index-array* (make-gpu-array (list 2 1 0 3 2 0
+    ;;                                                           6 5 4 7 6 4
+    ;;                                                           9 10 8 10 11 8
+    ;;                                                           15 14 12 13 15 12
+    ;;                                                           18 17 16 19 18 16
+    ;;                                                           22 21 20 21 23 20)
+    ;;                                                     :element-type :uint))
+    ;; (setf-if-nil *vert-array-buffer-stream* (make-buffer-stream *vert-gpu-array*
+    ;;                                                             :index-array *vert-gpu-index-array*))
     
-
-    ;; (bt:with-lock-held (render-fbo-sampler-lock)
-    ;;   )
     
-    ;;(gl:enable :depth-test)
-    ;;(setf (cepl:depth-test-function render-thread-context) #'<)
-    (with-fbo-bound (render-fbo)
-      (with-blending *blending-params*
-        ;;(setup-projection-matrix)
+    (bt:with-lock-held (render-fbo-sampler-lock)
+      (with-fbo-bound (render-fbo)
         (setf camera-current-pos (vox-cam:cam-pos *camera*)
               camera-current-rot (vox-cam:cam-rot *camera*))
         (clear)
-        ;;(render-night-sky)
-        ;;(render-chunks)
-        ;; (let* ((chunk (gethash `(0 0 0) *chunks-at-offsets-table*)))
-        ;;   (when chunk
-        ;;     (render (first chunk))))
-
-        ;;(map-g #'basic-pipeline *vert-array-buffer-stream*)
         (map-g #'basic-pipeline *vert-array-buffer-stream*
                :now (float *now*)
                :proj *projection-matrix*
                :rot (v! (* 90 0.03 *now*) (* 90 0.02 *now*) (* 90 0.01 *now*))
-               )
-        
+               :texture-atlas-ssbo texture-atlas-ssbo)
         (render-chunks)
-        
-        (gl:finish)))
-    
-    ;; (step-host)
-    ;; (swap)
+        (gl:finish)
+        ))
     ))
+
+;; (defun test ()
+;;   (unless nil
+;;     ;; (ignore-errors
+;;     ;;  (setf (resolution (current-viewport))
+;;     ;;        (get-cepl-context-surface-resolution)))
+;;     ;; (setup-projection-matrix)
+
+;;     (setf (clear-color) sky-colour)
+;;     (progn
+;;       (progn
+;;         (clear)
+;;         (map-g #'screen-plane-pipeline screen-plane-buffer-stream
+;;                :tex-sampler render-fbo-sampler)
+;;         (swap)
+;;         ;;(gl:finish)
+;;         )
+;;       )))
 
 (defun step-rendering ()
   (unless *rendering-paused?*
-;;    (setf (clear-color) sky-colour)
-    ;; (clear)
-    ;; ;; (setup-projection-matrix)
-    ;; ;; (setf camera-current-pos (vox-cam:cam-pos *camera*)
-    ;; ;;       camera-current-rot (vox-cam:cam-rot *camera*))
-    ;; ;; (with-blending *blending-params*
-    ;; ;;   ;;(render-night-sky)
-    ;; ;;   (render-chunks))
-    ;; (bt:with-lock-held)
-    ;; (swap)
-
-    ;; (step-host)
     (ignore-errors
      (setf (resolution (current-viewport))
            (get-cepl-context-surface-resolution)))
     (setup-projection-matrix)
+
+    (setf (clear-color) sky-colour)
     (when render-fbo-sampler
-      ;; (bt:with-lock-held (render-fbo-sampler-lock)
-      ;;   )
-      (clear)
-      (map-g #'screen-plane-pipeline screen-plane-buffer-stream
-             :tex-sampler render-fbo-sampler)
-      (swap)
-      )
-    
-    
-    
-    ))
+      (bt:with-lock-held (render-fbo-sampler-lock)
+        (clear)
+        (map-g #'screen-plane-pipeline screen-plane-buffer-stream
+               :tex-sampler render-fbo-sampler)
+        (swap)
+        ;;(gl:finish)
+        )
+      )))
 
 (defparameter inner-loader-thread-func (lambda ()
                                          (if chunks-queued-to-be-freed?
@@ -417,7 +451,6 @@
                                                (maphash (lambda (offset entry)
                                                           (try-free (car entry)))
                                                         *chunks-at-offsets-table*)
-                                               (clrhash *chunks-at-offsets-table*)
                                                (setf chunks-queued-to-be-freed? nil)))
                                          
                                          (when queued-chunks
@@ -448,6 +481,7 @@
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free (first existing-chunk)))
                                                    (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
+                                                 
                                                  (try-free-objects vert-array index-array)
                                                  ))
                                            ;;(update-now)
@@ -457,7 +491,9 @@
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
 
-(defparameter *max-framerate* 60)
+(defparameter *max-framerate* 600)
+;;(defparameter *max-input-poll-rate* 600)
+(defparameter limit-input-polling? t)
 
 (defparameter prior-time 1)
 (defparameter main-loop-fps 123)
@@ -467,51 +503,41 @@
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 ;;(funcall render-loop-func)
-                                 ;;(vox-cam:update-camera *camera* *delta*)
-                                 
-                                 
-                                 
-
-                                 
-                                 ;;(funcall inner-loader-thread-func)
                                  (step-rendering)
                                  (step-host)
                                  (update-inputs)
                                  (livesupport:update-repl-link)
-                                 (sleep 0.0001)
                                  (setf main-loop-fps-buffer-index (mod (1+ main-loop-fps-buffer-index) 1000))
-                                 (setf main-loop-delta (coerce (- *now-input* prior-time) 'double-float))
-                                 (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.00000001 main-loop-delta))))
-                                 
-                                 (setf main-loop-fps (truncate (/ (apply #'+ (loop for fps across main-loop-fps-buffer collect fps)) 1000)))
+                                 (setf main-loop-delta (- (update-now-input) prior-time))
+                                 (setf (aref main-loop-fps-buffer main-loop-fps-buffer-index) (truncate (/ 1d0 (max 0.00000001 main-loop-delta))))                                 
+                                 (setf main-loop-fps (truncate (/ 1d0 (max 0.00000001 main-loop-delta))))
                                  (setf prior-time *now-input*)
+
+                                 (when limit-input-polling?
+                                   (sleep 0.00001))
+
                                  )))
 
 (defparameter fbo-render-loop-func (lambda ()
                                      (livesupport:continuable
-                                       ;;(funcall render-loop-func)
-                                       ;;(funcall inner-loader-thread-func)
-                                       ;; (update-now)
-                                       ;; (step-fbo-rendering)
-                                       ;;(sleep 0.001)
-                                       (funcall render-loop-func)
-                                       (funcall inner-loader-thread-func)
+                                       (if *rendering-paused?*
+                                           (sleep 0.001)
+                                           (progn
+                                             (funcall render-loop-func)
+                                             (funcall inner-loader-thread-func)))
+
+                                       
                                        )))
 
 (defparameter render-loop-func (lambda ()
                                  (let* ((target-delta (/ 1d0 *max-framerate*))
                                         (start-time (progn (update-now) *now-double*))
                                         (time-since-last-frame (- start-time *last-frame-time*)))
-                                   (when (and (>= time-since-last-frame target-delta)
-                                              (not *rendering-paused?*))
-                                     (let ()
-                                       (step-fbo-rendering)
-                                       (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
-                                       (setf *last-frame-time* *now-double*)
-                                       
-                                       ;;(update-now)
-                                       )))))
+                                   (if (>= time-since-last-frame target-delta)
+                                       (progn (step-fbo-rendering)
+                                              (setf *fps* (truncate (/ 1.0d0 (- *now-double* *last-frame-time*))))
+                                              (setf *last-frame-time* *now-double*))
+                                       (sleep 0.0001)))))
 
 (defun update-inputs ()
   (update-now-input)
@@ -526,6 +552,8 @@
   (ignore-errors (cepl:repl 720 480))
   (init)
   (setf (cepl.sdl2::vsync) nil)
+  (with-paused-rendering
+    (resolve-textures))
   (init-render-thread)
   (loop (funcall main-loop-func)))
 

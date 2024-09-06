@@ -22,8 +22,10 @@
 
 (defun bind-block-symbol-to-mesh (block-symbol mesh-verts mesh-indices texture-atlas-column texture-atlas-row &optional (solid-p t))
   "Mesh should be a list of lists, where each sublist contains a list of sublists each each sublist contains a vec3 for vertices, and a vec2 for uv's."
-  (setf (gethash block-symbol *symbol-mesh-table*)
-        (make-block-mesh mesh-verts mesh-indices texture-atlas-column texture-atlas-row block-symbol solid-p)))
+  (bt:with-lock-held (symbol-mesh-table-lock)
+    (setf (gethash block-symbol *symbol-mesh-table*)
+          (make-block-mesh mesh-verts mesh-indices texture-atlas-column texture-atlas-row block-symbol solid-p)))
+  )
 
 (defun make-block-mesh (mesh-verts mesh-indices texture-atlas-column texture-atlas-row block-symbol &optional (solid-p t))
   (let (n-verts)
@@ -61,8 +63,11 @@
 
 (defun setup-mesh-table ()
   (defparameter *symbol-mesh-table* (make-hash-table))
+  (defparameter symbol-mesh-table-lock (bt:make-lock "symbol-mesh-table-lock"))
   (setup-default-cube-mesh)
   (mapcar (lambda (data) (apply #'bind-block-symbol-to-mesh data))
-          (vox-world-sample:get-default-blocks-for-binding)))
+          (vox-world-sample:get-default-blocks-for-binding))
+  
+  )
 
 (setup-mesh-table)

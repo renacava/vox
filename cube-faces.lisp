@@ -110,10 +110,14 @@
         (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float))
        (list 2 1 0 1 3 0))))
 
-  (let ((cache (make-hash-table :test #'equal)))
+  (let ((cache (make-hash-table :test #'equal))
+        (cache-lock (bt:make-lock)))
     (defun build-cube-mesh-from-faces (faces)
-      (or (gethash faces cache)
-          (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))))
+      ;; (bt:with-lock-held (cache-lock)
+      ;;   (or (gethash faces cache)
+      ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
+      (combine-cube-faces (get-cube-faces (remove-duplicates faces)))
+      )))
 
 (defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))
