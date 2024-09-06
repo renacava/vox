@@ -378,6 +378,15 @@
       (render-chunks)
       (swap))))
 
+(defun init-chunk-gen-thread ()
+  (bt:make-thread (lambda () (loop (funcall chunk-gen-thread-func))) :name "chunk-gen-thread"))
+
+(defparameter chunk-gen-thread-func (lambda ()
+                                      (if queued-primordial-chunks
+                                          (let ((offset (pop queued-primordial-chunks)))
+                                            (make-chunk offset
+                                                        (vox-world-sample:make-random-chunk-blocks2d offset)))
+                                          (sleep 0.0001))))
 
 (defparameter inner-loader-thread-func (lambda ()
                                          (when chunks-queued-to-be-freed?
@@ -385,9 +394,8 @@
                                                       (try-free (car entry)))
                                                     *chunks-at-offsets-table*)
                                            (clrhash *chunks-at-offsets-table*)
-                                           (setf chunks-queued-to-be-freed? nil)
-                                           )
-                                         
+                                           (setf chunks-queued-to-be-freed? nil))
+
                                          (when queued-chunks
                                            (let* ((queued-chunk (pop queued-chunks))
                                                   (mesh-data (first queued-chunk))
@@ -477,6 +485,7 @@
   (with-paused-rendering
     (resolve-textures))
   (init-render-thread)
+  (init-chunk-gen-thread)
   (loop (funcall main-loop-func)))
 
 (defun pause ()
