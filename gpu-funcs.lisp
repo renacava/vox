@@ -1,5 +1,11 @@
 (in-package #:vox)
 
+(defstruct-g ssbo-struct
+  (data (:vec4 (2304)) :accessor data))
+
+(defun-g 2d-to-1d-g ((x :int) (y :int) (array-width :int))
+  (+ x (* y array-width)))
+
 (defun-g face-light-float-to-multiplier ((face-light-float :float))
   (labels ((fleq ((x :int) (subsequent :float) (alternative :float))
              (float-eq-or face-light-float x subsequent alternative)))

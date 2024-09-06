@@ -328,12 +328,6 @@
                            (vec3 1.0 0.0 1.0) ;;23
                            ))
 
-(defstruct-g ssbo-struct
-  (data (:vec4 (2304)) :accessor data))
-
-(defun-g 2d-to-1d-g ((x :int) (y :int) (array-width :int))
-  (+ x (* y array-width)))
-
 (defun-g basic-vert-stage ((vert :vec3)
                      &uniform
                      (now :float)
