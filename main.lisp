@@ -378,6 +378,7 @@
 (defparameter *vert-gpu-array* nil)
 (defparameter *vert-gpu-index-array* nil)
 (defparameter *vert-array-buffer-stream* nil)
+(defparameter rendered-frame-index 0)
 
 (defun step-fbo-rendering ()
   (unless *rendering-paused?*
@@ -405,6 +406,7 @@
                :rot (v! (* 90 0.03 *now*) (* 90 0.02 *now*) (* 90 0.01 *now*))
                :texture-atlas-ssbo texture-atlas-ssbo)
         (render-chunks)
+        (setf rendered-frame-index (mod (incf rendered-frame-index) 1000))
         (gl:finish)
         ))
     ))
@@ -427,20 +429,26 @@
 ;;         )
 ;;       )))
 
+(defparameter prior-frame-index 0)
+
 (defun step-rendering ()
   (unless *rendering-paused?*
-    (ignore-errors
-     (setf (resolution (current-viewport))
-           (get-cepl-context-surface-resolution)))
-    (setup-projection-matrix)
 
-    (setf (clear-color) sky-colour)
-    (when render-fbo-sampler
+    (when (and (not *rendering-paused?*)
+               (not (= rendered-frame-index prior-frame-index))
+               render-fbo-sampler)
+      (ignore-errors
+       (setf (resolution (current-viewport))
+             (get-cepl-context-surface-resolution)))
+      (setup-projection-matrix)
+
+      (setf (clear-color) sky-colour)
       (bt:with-lock-held (render-fbo-sampler-lock)
         (clear)
         (map-g #'screen-plane-pipeline screen-plane-buffer-stream
                :tex-sampler render-fbo-sampler)
         (swap)
+        (setf prior-frame-index rendered-frame-index)
         ;;(gl:finish)
         )
       )))
