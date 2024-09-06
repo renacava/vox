@@ -499,7 +499,7 @@
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
 
-(defparameter *max-framerate* 600)
+(defparameter *max-framerate* 60)
 ;;(defparameter *max-input-poll-rate* 600)
 (defparameter limit-input-polling? t)
 
@@ -549,7 +549,7 @@
 
 (defun update-inputs ()
   (update-now-input)
-  (vox-cam:update-camera *camera* *input-delta*)
+  (vox-cam:update-camera *camera* *input-delta* *now-input*)
   ;;(sleep 0.0001)
   )
 
