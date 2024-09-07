@@ -141,19 +141,14 @@
                           (list
                            (encode-vert-data1 (first vert)
                                               (second vert)
-                                              ;; (3d-to-1d (float (first offset))
-                                              ;;           (float (second offset))
-                                              ;;           (float (third offset))
-                                              ;;           chunk-width)
-                                              0.0
-                                              )
+                                              0.0)
                            (encode-vert-data2 face-float
                                               (2d-to-1d (getf mesh-instance :atlas-column)
                                                         (getf mesh-instance :atlas-row)
                                                         256))
-                           (3d-to-1d (float (first offset))
-                                     (float (second offset))
-                                     (float (third offset))
+                           (3d-to-1d (aref offset 0)
+                                     (aref offset 1)
+                                     (aref offset 2)
                                      chunk-width))))
           (second cube-mesh))))
 
@@ -216,14 +211,13 @@
 ;;     (read-from-string
 ;;      (format nil "~a.~a~af0"
 ;;              (truncate local-offset-index)
-;;              (truncate pos-index)
+;;              (truncate os-index)
 ;;              (truncate uv-index)))))
 
-(defun encode-vert-data1 (pos-index uv-index local-offset-index)
-  ;;(setq my-type (type-of local-offset-index))
-  (declare (type single-float pos-index uv-index local-offset-index)
+(defun encode-vert-data1 (pos-index uv-index)
+  (declare (type single-float pos-index uv-index)
            (optimize (speed 3) (safety 0)))
-  (+ local-offset-index (/ pos-index 10) (/ uv-index 100))
+  (+ (/ pos-index 10) (/ uv-index 100))
   ;; (let* ((local-offset local-offset-index)
   ;;        (pos-index (/ pos-index 10))
   ;;        (uv-index (/ uv-index 100)))
