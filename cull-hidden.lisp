@@ -82,6 +82,8 @@
 (defparameter interchunk-culling? t)
 
 (defun pos-solid (pos chunk-block-array chunk-offset)
+  (when (< (aref pos 1) 0)
+    (return-from pos-solid t))
   (let* ((x (aref pos 0))
          (y (aref pos 1))
          (z (aref pos 2))
@@ -105,13 +107,10 @@
          )
     (if border-pos?
         border-block-solidity
-        
         (and (< -1 x *chunk-width*)
              (< -1 y *chunk-height*)
              (< -1 z *chunk-width*)
-             ;;(not border-pos?)
-             (aref chunk-block-array (truncate (3d-to-1d x y z)))))
-    ))
+             (aref chunk-block-array (truncate (3d-to-1d x y z)))))))
 
 (defun solid-above-p (pos chunk-block-array chunk-offset)
   (pos-solid (pos-above pos) chunk-block-array chunk-offset))
