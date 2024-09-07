@@ -79,22 +79,26 @@
           (aref pos 1)
           (aref pos 2)))
 
+(defparameter interchunk-culling? t)
+
 (defun pos-solid (pos chunk-block-array chunk-offset)
   (let* ((x (aref pos 0))
          (y (aref pos 1))
          (z (aref pos 2))
-         (border-pos? (or (= x -1)
-                          (= z -1)
-                          (= x *chunk-width*)
-                          (= z *chunk-width*)))
-         (offset-pos (v3:+
-                      (vec3 (float x)
-                            (float y)
-                            (float z))
-                      (vec3 (* (aref chunk-offset 0) *chunk-width*)
-                            0.0
-                            (* (aref chunk-offset 2) *chunk-width*))))
-         (border-pos-block (when border-pos?
+         (border-pos? (and interchunk-culling?
+                           (or (= x -1)
+                               (= z -1)
+                               (= x *chunk-width*)
+                               (= z *chunk-width*))))
+         (offset-pos (when border-pos?
+                       (v3:+
+                        (vec3 (float x)
+                              (float y)
+                              (float z))
+                        (vec3 (* (aref chunk-offset 0) *chunk-width*)
+                              0.0
+                              (* (aref chunk-offset 2) *chunk-width*)))))
+         (border-pos-block (when offset-pos
                              (vws:sample-single-pos offset-pos)))
          (border-block-solidity (when border-pos-block
                                   (get-symbol-mesh-solid-p border-pos-block)))

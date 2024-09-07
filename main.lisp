@@ -307,6 +307,8 @@
   (basic-vert-stage :vec3)
   (basic-frag-stage :vec3))
 
+(defparameter *tris-rendered-in-previous-frame* 0)
+
 (defun step-rendering ()
   (unless *rendering-paused?*
     (with-fbo-bound ((default-fbo (cepl-context)))
@@ -318,7 +320,7 @@
       (clear)
       (setf camera-current-pos (vox-cam:cam-pos *camera*)
             camera-current-rot (vox-cam:cam-rot *camera*))
-      (render-chunks)
+      (setf *tris-rendered-in-previous-frame* (render-chunks))
       (swap))))
 
 (defun init-chunk-gen-thread ()
