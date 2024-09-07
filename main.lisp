@@ -105,24 +105,24 @@
          (fog-colour (* skylight-colour 0.8)))
 
     (setf texture-sample (* texture-sample (vec4 sunlight-mult sunlight-mult sunlight-mult 1.0)))
-    ;;(setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
+    (setf texture-sample (* texture-sample (vec4 skylight-colour 1.0)))
     ;;(vec4 texture-sample 1.0)
     ;;texture-sample
-    ;; (vec4
-    ;;  (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
-    ;;  (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
-    ;;  (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
-    ;;  1.0)
+    (vec4
+     (lerp (aref fog-colour 0) (aref texture-sample 0) fog-mult)
+     (lerp (aref fog-colour 1) (aref texture-sample 1) fog-mult)
+     (lerp (aref fog-colour 2) (aref texture-sample 2) fog-mult)
+     1.0)
     ;; (vec4 (mod (aref pos 0) 1.0)
     ;;       (mod (aref pos 1) 1.0)
     ;;       (mod (aref pos 2) 1.0)
     ;;       (aref pos 3))
-    (vec4 (mod (aref texture-sample 0) 1.0)
-          (mod (aref texture-sample 1) 1.0)
-          (mod (aref texture-sample 2) 1.0)
-          1.0)
-    (vec4 1.0 0.0 0.0 1.0)
-    texture-sample
+    ;; (vec4 (mod (aref texture-sample 0) 1.0)
+    ;;       (mod (aref texture-sample 1) 1.0)
+    ;;       (mod (aref texture-sample 2) 1.0)
+    ;;       1.0)
+    ;; (vec4 1.0 0.0 0.0 1.0)
+    ;; texture-sample
     )
   
   )

@@ -87,7 +87,7 @@
                               append (loop for j below radius-z
                                            collect (list j 0 (truncate i)))))
          (offset-groups (group chunk-offsets 6)))
-    (loop for offset in chunk-offsets
+    (loop for offset in (reverse chunk-offsets)
           do (push offset queued-primordial-chunks))
     ;; (bt:make-thread
     ;;  (lambda ()
