@@ -82,7 +82,7 @@
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   ;;(setup-lparallel-kernel)
-  ;;(setf chunks-queued-to-be-freed? t)
+  (setf chunks-queued-to-be-freed? t)
   (setf queued-primordial-chunks nil)
   (let* ((chunk-offsets (loop for i below radius-x
                               append (loop for j below radius-z

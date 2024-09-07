@@ -9,12 +9,12 @@
                        (getf (get-mesh-bound-to-block-symbol symbol) :solid-p)))))
     solid-p-table))
 
-(defun make-empty-chunk-block-array ()
-  (make-array (* *chunk-width* *chunk-width* *chunk-height*) :initial-element nil))
+(defun make-empty-chunk-block-array (chunk-width chunk-height)
+  (make-array (* chunk-width chunk-width chunk-height) :initial-element nil))
 
-(defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
-  (let ((block-array (make-empty-chunk-block-array))
-        (xz-y-array (make-array (list *chunk-width* *chunk-width*) :initial-element nil)))  
+(defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols &optional (chunk-width *chunk-width*))
+  (let* ((block-array (make-empty-chunk-block-array chunk-width *chunk-height*))
+         (xz-y-array (make-array (list chunk-width chunk-width) :initial-element nil)))  
     (loop for position-and-symbol in positions-and-symbols
           do (let* ((x (first position-and-symbol))
                     (y (second position-and-symbol))
@@ -22,7 +22,9 @@
                     (block-symbol (last1 position-and-symbol))
                     (index (truncate (3d-to-1d x
                                       y
-                                      z)))
+                                      z
+                                      chunk-width
+                                      *chunk-height*)))
                     (solid? (get-symbol-mesh-solid-p block-symbol))
                     (y-array-entry (aref xz-y-array x z)))
                (if solid?

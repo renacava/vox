@@ -388,7 +388,9 @@
                                       (if queued-primordial-chunks
                                           (let ((offset (pop queued-primordial-chunks)))
                                             (make-chunk offset
-                                                        (vox-world-sample:make-random-chunk-blocks2d offset lod)))
+                                                        (vox-world-sample:make-random-chunk-blocks2d offset
+                                                                                                     lod
+                                                                                                     *chunk-width*)))
                                           (sleep 0.0001))))
 
 (defparameter inner-loader-thread-func (lambda ()
