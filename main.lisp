@@ -26,7 +26,8 @@
 
 (defstruct-g block-vert
   (data1 :float)
-  (data2 :float))
+  (data2 :float)
+  (local-offset :float))
 
 (defun-g vert-stage ((vert block-vert)
                      &uniform
@@ -43,7 +44,8 @@
          (data1 (decode-vert-data1 data1))
          (pos (aref data1 0))
          (uv (aref data1 1))
-         (local-offset-index (aref data1 2))
+         ;;(local-offset-index (aref data1 2))
+         (local-offset-index (block-vert-local-offset vert))
          (rot (rtg-math.matrix4:rotation-from-euler cam-rot))
          (data2 (block-vert-data2 vert))
          (data2 (decode-vert-data2 data2))
@@ -329,11 +331,18 @@
 (defparameter chunk-gen-thread-func (lambda ()
                                       (livesupport:continuable
                                         (if queued-primordial-chunks
-                                            (let ((offset (pop queued-primordial-chunks)))
+                                            (let* ((chunk-data (pop queued-primordial-chunks))
+                                                   (offset (car chunk-data))
+                                                   (width (second chunk-data))
+                                                   (height (third chunk-data)))
                                               (make-chunk offset
-                                                          (vox-world-sample:make-random-chunk-blocks2d offset
-                                                                                                       lod
-                                                                                                       *chunk-width*)))
+                                                          (vox-world-sample:make-random-chunk-blocks2d
+                                                           width
+                                                           height
+                                                           offset
+                                                           lod)
+                                                          width
+                                                          height))
                                             (sleep 0.0001)))))
 
 (defparameter inner-loader-thread-func (lambda ()

@@ -119,7 +119,7 @@
       (combine-cube-faces (get-cube-faces (remove-duplicates faces)))
       )))
 
-(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset &optional (distance-from-top-block 0))
+(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))
         (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
@@ -141,17 +141,25 @@
                           (list
                            (encode-vert-data1 (first vert)
                                               (second vert)
-                                              (3d-to-1d (float (first offset))
-                                                        (float (second offset))
-                                                        (float (third offset))))
+                                              ;; (3d-to-1d (float (first offset))
+                                              ;;           (float (second offset))
+                                              ;;           (float (third offset))
+                                              ;;           chunk-width)
+                                              0.0
+                                              )
                            (encode-vert-data2 face-float
                                               (2d-to-1d (getf mesh-instance :atlas-column)
                                                         (getf mesh-instance :atlas-row)
-                                                        256)))))
+                                                        256))
+                           (3d-to-1d (float (first offset))
+                                     (float (second offset))
+                                     (float (third offset))
+                                     chunk-width))))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)
   (loop for face in faces
+        when face
         collect (case face
                   (front cube-front)
                   (back cube-back)

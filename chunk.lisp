@@ -65,8 +65,8 @@
                :now *now*
                :proj *projection-matrix*
                :offset (offset chunk)
-               :chunk-width (truncate *chunk-width*)
-               :chunk-height (truncate *chunk-height*)
+               :chunk-width (truncate (width chunk))
+               :chunk-height (truncate (height chunk))
                :texture-atlas-ssbo texture-atlas-ssbo
                :atlas-size *texture-atlas-size*
                :skylight-colour (lerp-vec3
@@ -79,12 +79,7 @@
                :lod (float lod)
                )))))
 
-
-
 (defparameter lod 0f0)
-
-
-
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setf chunks-queued-to-be-freed? t)
@@ -92,36 +87,42 @@
   (let* ((chunk-offsets (loop for i below radius-x
                               append (loop for j below radius-z
                                            collect (list j 0 (truncate i)))))
-         (offset-groups (group chunk-offsets 6)))
+         ;;(offset-groups (group chunk-offsets 6))
+         )
     (loop for offset in (reverse chunk-offsets)
-          do (push offset queued-primordial-chunks))))
+          do (push (list offset width height) queued-primordial-chunks))))
 
-(defun regen-chunk (&optional (chunk-offset `(0 0 0)) (block-positions-and-symbols (vox-world-sample:make-random-chunk-blocks2d chunk-offset)))
-  (let ((chunk (gethash chunk-offset *chunks-at-offsets-table*)))
+(defun regen-chunk (&optional (chunk-offset `(0 0 0)) block-positions-and-symbols)
+  (let ((chunk (gethash chunk-offset *chunks-at-offsets-table*))
+        (blocks nil))
     (when chunk
+      (setf chunk (car chunk))
+      (setf blocks (or block-positions-and-symbols
+                       (vox-world-sample:make-random-chunk-blocks2d chunk-offset (width chunk) (height chunk))))
+      (push (list chunk-offset (width chunk) (height chunk)) queued-primordial-chunks)
       (remhash chunk-offset *chunks-at-offsets-table*)
-      (try-free (car chunk))))
-  (push chunk-offset queued-primordial-chunks))
+      (try-free chunk))))
 
-(defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*) (height *chunk-height*))
+(defun make-chunk (chunk-offset block-positions-and-symbols width height)
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
-  (when block-positions-and-symbols
+  (when block-positions-and-symbols   
     (labels ((queue ()
                (if (queue-full?)
                    (progn (sleep 0.0001)
                           (queue))
-                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset)
+                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width)
                                 chunk-offset
                                 width
                                 height))))
       (queue))))
 
-(defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset)
+(defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset chunk-width)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
   (combine-blocks-verts-and-indices
    (make-blocks-verts-and-indices-from-positions-and-symbols
     (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols)
-    chunk-offset)))
+    chunk-offset
+    chunk-width)))
 
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))

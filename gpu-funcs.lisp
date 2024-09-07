@@ -102,14 +102,11 @@
 
 
 (defun-g decode-vert-data1 ((data1 :float))
-  (let* ((local-offset-index (floor data1))
-         (data1 (* data1 100))
-         (data1 (- data1 (* local-offset-index 100)))
+  (let* ((data1 (* data1 100))
          (pos (round (/ data1 10)))
          (uv (round (- data1 (* 10 pos)))))
-    (vec3 pos
-          uv
-          local-offset-index)))
+    (vec2 pos
+          uv)))
 
 (defun-g decode-vert-data2 ((data2 :float))
   (let* ((face-float (round data2))

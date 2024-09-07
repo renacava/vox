@@ -1,7 +1,7 @@
 (in-package #:vox)
 
-(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset)
-  (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
+(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset chunk-width)
+  (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols chunk-width)))
          (chunk-block-solidity-array (first solidity-array-result))
          (top-blocks-array2D (second solidity-array-result)))
     (combine-cube-faces
@@ -15,14 +15,54 @@
                       (make-cube-faces-from-adjacent-solids
                        (vector x y z)
                        chunk-block-solidity-array
-                       (vec3 (float (first chunk-offset))
-                             (float (second chunk-offset))
-                             (float (third chunk-offset))))
-                      block-symbol
+                       (vector (float (first chunk-offset))
+                               (float (second chunk-offset))
+                               (float (third chunk-offset)))
+                       chunk-width)
+                      block-symbol 
                       (list x y z)
+                      chunk-width
                       (- (aref top-blocks-array2D x z) y)
                       ;;(= (aref top-blocks-array2D x z) y)
-                      ))))))
+                      ))))
+
+
+    ;; (loop for pos-and-symb in positions-and-symbols
+    ;;       when (last1 pos-and-symb)
+    ;;       collect (let ((x (first pos-and-symb))
+    ;;                     (y (second pos-and-symb))
+    ;;                     (z (third pos-and-symb))
+    ;;                     (block-symbol (last1 pos-and-symb)))
+    ;;                 (augment-cube-mesh-with-block-symbol-and-offset
+    ;;                  (make-cube-faces-from-adjacent-solids
+    ;;                   (vector x y z)
+    ;;                   chunk-block-solidity-array
+    ;;                   (vec3 (float (first chunk-offset))
+    ;;                         (float (second chunk-offset))
+    ;;                         (float (third chunk-offset)))
+    ;;                   chunk-width)
+    ;;                  block-symbol 
+    ;;                  (list x y z)
+    ;;                  chunk-width
+    ;;                  (- (aref top-blocks-array2D x z) y)
+    ;;                  ;;(= (aref top-blocks-array2D x z) y)
+    ;;                  )))
+
+    ;; (loop for pos-and-symb in positions-and-symbols
+    ;;       when (last1 pos-and-symb)
+    ;;       collect (let ((x (float (first pos-and-symb)))
+    ;;                     (y (float (second pos-and-symb)))
+    ;;                     (z (float (third pos-and-symb)))
+    ;;                     (block-symbol (last1 pos-and-symb)))
+    ;;                 (make-cube-faces-from-adjacent-solids
+    ;;                  (vec3 x y z)
+    ;;                  chunk-block-solidity-array
+    ;;                  (vec3 (float (first chunk-offset))
+    ;;                        (float (second chunk-offset))
+    ;;                        (float (third chunk-offset)))
+    ;;                  chunk-width)))
+    
+    ))
 
 (defun combine-blocks-verts-and-indices (blocks-verts-and-indices)
   (let* ((vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
