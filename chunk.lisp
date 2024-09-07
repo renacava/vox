@@ -122,7 +122,7 @@
                (if (queue-full?)
                    (progn (sleep 0.0001)
                           (queue))
-                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols)
+                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset)
                                 chunk-offset
                                 width
                                 height))))
@@ -133,11 +133,12 @@
     ;;              height)
     ))
 
-(defun make-chunk-mesh-from-data (block-positions-and-symbols)
+(defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
   (combine-blocks-verts-and-indices
    (make-blocks-verts-and-indices-from-positions-and-symbols
-    (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols))))
+    (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols)
+    chunk-offset)))
 
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))

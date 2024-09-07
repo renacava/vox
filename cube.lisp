@@ -1,6 +1,6 @@
 (in-package #:vox)
 
-(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols)
+(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset)
   (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols)))
          (chunk-block-solidity-array (first solidity-array-result))
          (top-blocks-array2D (second solidity-array-result)))
@@ -14,7 +14,10 @@
                      (augment-cube-mesh-with-block-symbol-and-offset
                       (make-cube-faces-from-adjacent-solids
                        (vector x y z)
-                       chunk-block-solidity-array)
+                       chunk-block-solidity-array
+                       (vec3 (float (first chunk-offset))
+                             (float (second chunk-offset))
+                             (float (third chunk-offset))))
                       block-symbol
                       (list x y z)
                       (- (aref top-blocks-array2D x z) y)

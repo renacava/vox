@@ -35,16 +35,19 @@
                (setf (aref block-array index) solid?)))
     (values block-array xz-y-array)))
 
-(defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)
-  (build-cube-mesh-from-faces
-   (remove-if-not #'identity
-                  (remove-if-not #'identity
-                                 (list (when (not (solid-above-p pos chunk-block-array)) 'top)
-                                       (when (not (solid-below-p pos chunk-block-array)) 'bottom)
-                                       (when (not (solid-right-p pos chunk-block-array)) 'right)
-                                       (when (not (solid-left-p pos chunk-block-array)) 'left)
-                                       (when (not (solid-ahead-p pos chunk-block-array)) 'front)
-                                       (when (not (solid-behind-p pos chunk-block-array)) 'back))))))
+
+(defun make-cube-faces-from-adjacent-solids (pos chunk-block-array chunk-offset)
+  (flet ((query-pos (solidity-func face)
+           (when (not (funcall solidity-func pos chunk-block-array chunk-offset)) face)))
+    (build-cube-mesh-from-faces
+     (remove-if-not #'identity
+                    (remove-if-not #'identity
+                                   (list (query-pos #'solid-above-p 'top)
+                                         (query-pos #'solid-below-p 'bottom)
+                                         (query-pos #'solid-right-p 'right)
+                                         (query-pos #'solid-left-p 'left)
+                                         (query-pos #'solid-ahead-p 'front)
+                                         (query-pos #'solid-behind-p 'back)))))))
 
 (defun pos-above (pos)
   (vector (aref pos 0)
@@ -76,22 +79,29 @@
           (aref pos 1)
           (aref pos 2)))
 
-(defun pos-solid (pos chunk-block-array)
+(defun pos-solid (pos chunk-block-array chunk-offset)
   (let* ((x (aref pos 0))
          (y (aref pos 1))
          (z (aref pos 2))
-         ;; (border-pos? (or (= x -1)
-         ;;                  (= z -1)
-         ;;                  (= x *chunk-width*)
-         ;;                  (= z *chunk-width*)))
-         ;; (border-pos-block (when border-pos?
-         ;;                     (vws:sample-single-pos pos)))
-         ;; (border-block-solidity (when border-pos-block
-         ;;                          (get-symbol-mesh-solid-p border-pos-block)))
+         (border-pos? (or (= x -1)
+                          (= z -1)
+                          (= x *chunk-width*)
+                          (= z *chunk-width*)))
+         (offset-pos (v3:+
+                      (vec3 (float x)
+                            (float y)
+                            (float z))
+                      (vec3 (* (aref chunk-offset 0) *chunk-width*)
+                            0.0
+                            (* (aref chunk-offset 2) *chunk-width*))))
+         (border-pos-block (when border-pos?
+                             (vws:sample-single-pos offset-pos)))
+         (border-block-solidity (when border-pos-block
+                                  (get-symbol-mesh-solid-p border-pos-block)))
          )
-    (if ;; border-pos?
-     ;; border-block-solidity
-     t
+    (if border-pos?
+        border-block-solidity
+        
         (and (< -1 x *chunk-width*)
              (< -1 y *chunk-height*)
              (< -1 z *chunk-width*)
@@ -99,20 +109,20 @@
              (aref chunk-block-array (truncate (3d-to-1d x y z)))))
     ))
 
-(defun solid-above-p (pos chunk-block-array)
-  (pos-solid (pos-above pos) chunk-block-array))
+(defun solid-above-p (pos chunk-block-array chunk-offset)
+  (pos-solid (pos-above pos) chunk-block-array chunk-offset))
 
-(defun solid-below-p (index chunk-block-array)
-  (pos-solid (pos-below index) chunk-block-array))
+(defun solid-below-p (index chunk-block-array chunk-offset)
+  (pos-solid (pos-below index) chunk-block-array chunk-offset))
 
-(defun solid-left-p (index chunk-block-array)
-  (pos-solid (pos-left index) chunk-block-array))
+(defun solid-left-p (index chunk-block-array chunk-offset)
+  (pos-solid (pos-left index) chunk-block-array chunk-offset))
 
-(defun solid-right-p (index chunk-block-array)
-  (pos-solid (pos-right index) chunk-block-array))
+(defun solid-right-p (index chunk-block-array chunk-offset)
+  (pos-solid (pos-right index) chunk-block-array chunk-offset))
 
-(defun solid-ahead-p (index chunk-block-array)
-  (pos-solid (pos-ahead index) chunk-block-array))
+(defun solid-ahead-p (index chunk-block-array chunk-offset)
+  (pos-solid (pos-ahead index) chunk-block-array chunk-offset))
 
-(defun solid-behind-p (index chunk-block-array)
-  (pos-solid (pos-behind index) chunk-block-array))
+(defun solid-behind-p (index chunk-block-array chunk-offset)
+  (pos-solid (pos-behind index) chunk-block-array chunk-offset))
