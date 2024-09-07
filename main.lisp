@@ -37,7 +37,8 @@
                      (offset :vec3)
                      (chunk-width :int)
                      (chunk-height :int)
-                     (atlas-size :float))
+                     (atlas-size :float)
+                     (lod :float))
   (let* ((data1 (block-vert-data1 vert))
          (data1 (decode-vert-data1 data1))
          (pos (aref data1 0))
@@ -54,11 +55,13 @@
          
          
          (pos (1d-to-3d pos 2.0 2.0))
+         (pos (* pos (+ 1.0 (* 1.0 lod))))
          (pos (+ pos (1d-to-3d local-offset-index chunk-width chunk-height)))
          (pos (vec4 pos 1))
          (offset (* offset chunk-width))
          (pos (+ pos (vec4 offset 0)))
          (pos (* pos 0.5))
+         
          (now (* 1.5 now))
          (pos (+ pos
                  ;; (vec4
@@ -385,7 +388,7 @@
                                       (if queued-primordial-chunks
                                           (let ((offset (pop queued-primordial-chunks)))
                                             (make-chunk offset
-                                                        (vox-world-sample:make-random-chunk-blocks2d offset)))
+                                                        (vox-world-sample:make-random-chunk-blocks2d offset lod)))
                                           (sleep 0.0001))))
 
 (defparameter inner-loader-thread-func (lambda ()
@@ -498,6 +501,7 @@
     (ignore-errors (lparallel:kill-tasks :default))
     (ignore-errors (lparallel:end-kernel))
     (setup-lparallel-kernel)
-    (setf chunks-queued-to-be-freed? t)))
+    (setf chunks-queued-to-be-freed? t)
+    (setf queued-primordial-chunks nil)))
 
 

@@ -10,7 +10,7 @@
     solid-p-table))
 
 (defun make-empty-chunk-block-array ()
-  (make-array *chunk-size* :initial-element nil))
+  (make-array (* *chunk-width* *chunk-width* *chunk-height*) :initial-element nil))
 
 (defun make-chunk-block-solidity-array-from-positions-and-symbols (positions-and-symbols)
   (let ((block-array (make-empty-chunk-block-array))

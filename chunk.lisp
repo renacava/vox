@@ -55,8 +55,8 @@
              :now *now*
              :proj *projection-matrix*
              :offset (offset chunk)
-             :chunk-width 16
-             :chunk-height 128
+             :chunk-width (truncate *chunk-width*)
+             :chunk-height (truncate *chunk-height*)
              :texture-atlas-ssbo texture-atlas-ssbo
              :atlas-size *texture-atlas-size*
              :skylight-colour (lerp-vec3
@@ -66,9 +66,10 @@
                                (vec3 light-level light-level light-level)
                                0.9)
              :sky-colour sky-colour
+             :lod (float lod)
              )
       )))
-
+(defparameter lod 0f0)
 ;;(defparameter chunks-per-step-host 200)
 
 (defun render-chunks ()
@@ -81,7 +82,7 @@
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   ;;(setup-lparallel-kernel)
-  (setf chunks-queued-to-be-freed? t)
+  ;;(setf chunks-queued-to-be-freed? t)
   (setf queued-primordial-chunks nil)
   (let* ((chunk-offsets (loop for i below radius-x
                               append (loop for j below radius-z
@@ -106,6 +107,10 @@
     ))
 
 (defun regen-chunk (&optional (chunk-offset `(0 0 0)) (block-positions-and-symbols (vox-world-sample:make-random-chunk-blocks2d chunk-offset)))
+  (let ((chunk (gethash chunk-offset *chunks-at-offsets-table*)))
+    (when chunk
+      (remhash chunk-offset *chunks-at-offsets-table*)
+      (try-free (car chunk))))
   (push chunk-offset queued-primordial-chunks)
   ;;(vox::make-chunk chunk-offset block-positions-and-symbols)
   )
