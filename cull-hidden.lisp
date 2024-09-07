@@ -36,14 +36,15 @@
     (values block-array xz-y-array)))
 
 (defun make-cube-faces-from-adjacent-solids (pos chunk-block-array)
-  (build-cube-mesh-from-faces (remove-if-not #'identity
-                                             (remove-if-not #'identity
-                                                            (list (when (not (solid-above-p pos chunk-block-array)) 'top)
-                                                                  (when (not (solid-below-p pos chunk-block-array)) 'bottom)
-                                                                  (when (not (solid-right-p pos chunk-block-array)) 'right)
-                                                                  (when (not (solid-left-p pos chunk-block-array)) 'left)
-                                                                  (when (not (solid-ahead-p pos chunk-block-array)) 'front)
-                                                                  (when (not (solid-behind-p pos chunk-block-array)) 'back))))))
+  (build-cube-mesh-from-faces
+   (remove-if-not #'identity
+                  (remove-if-not #'identity
+                                 (list (when (not (solid-above-p pos chunk-block-array)) 'top)
+                                       (when (not (solid-below-p pos chunk-block-array)) 'bottom)
+                                       (when (not (solid-right-p pos chunk-block-array)) 'right)
+                                       (when (not (solid-left-p pos chunk-block-array)) 'left)
+                                       (when (not (solid-ahead-p pos chunk-block-array)) 'front)
+                                       (when (not (solid-behind-p pos chunk-block-array)) 'back))))))
 
 (defun pos-above (pos)
   (vector (aref pos 0)
@@ -76,13 +77,27 @@
           (aref pos 2)))
 
 (defun pos-solid (pos chunk-block-array)
-  (let ((x (aref pos 0))
-        (y (aref pos 1))
-        (z (aref pos 2)))
-    (and (< -1 x *chunk-width*)
-         (< -1 y *chunk-height*)
-         (< -1 z *chunk-width*)
-         (aref chunk-block-array (truncate (3d-to-1d x y z))))))
+  (let* ((x (aref pos 0))
+         (y (aref pos 1))
+         (z (aref pos 2))
+         ;; (border-pos? (or (= x -1)
+         ;;                  (= z -1)
+         ;;                  (= x *chunk-width*)
+         ;;                  (= z *chunk-width*)))
+         ;; (border-pos-block (when border-pos?
+         ;;                     (vws:sample-single-pos pos)))
+         ;; (border-block-solidity (when border-pos-block
+         ;;                          (get-symbol-mesh-solid-p border-pos-block)))
+         )
+    (if ;; border-pos?
+     ;; border-block-solidity
+     t
+        (and (< -1 x *chunk-width*)
+             (< -1 y *chunk-height*)
+             (< -1 z *chunk-width*)
+             ;;(not border-pos?)
+             (aref chunk-block-array (truncate (3d-to-1d x y z)))))
+    ))
 
 (defun solid-above-p (pos chunk-block-array)
   (pos-solid (pos-above pos) chunk-block-array))
