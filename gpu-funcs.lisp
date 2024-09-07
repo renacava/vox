@@ -1,7 +1,8 @@
 (in-package #:vox)
 
+
 (defstruct-g ssbo-struct
-  (data (:vec4 (2304)) :accessor data))
+  (data (:vec4 (2304)) :accessor data)) ;; (* 48 48) => 2304; the size in pixels of the texture atlas.
 
 (defun-g 2d-to-1d-g ((x :int) (y :int) (array-width :int))
   (+ x (* y array-width)))
@@ -12,35 +13,36 @@
 
     (*
      (fleq 0   0.53   ;; TOP     UN-SUNLIT
-           (fleq 1   0.5    ;; LEFT    UN-SUNLIT
-                 (fleq 2   0.5    ;; RIGHT   UN-SUNLIT
-                       (fleq 3   0.4    ;; FRONT   UN-SUNLIT
-                             (fleq 4   0.4    ;; BACK    UN-SUNLIT
-                                   (fleq 5   0.32   ;; BOTTOM  UN-SUNLIT 
-                                         
-                                         (fleq 6   0.8    ;; TOP     SUNLIT
-                                               (fleq 7   0.6    ;; LEFT    SUNLIT
-                                                     (fleq 8   0.6    ;; RIGHT   SUNLIT
-                                                           (fleq 9   0.5    ;; FRONT   SUNLIT
-                                                                 (fleq 10  0.5    ;; BACK    SUNLIT
-                                                                       (fleq 11  0.4    ;; BOTTOM  SUNLIT
+     (fleq 1   0.5    ;; LEFT    UN-SUNLIT
+     (fleq 2   0.5    ;; RIGHT   UN-SUNLIT
+     (fleq 3   0.4    ;; FRONT   UN-SUNLIT
+     (fleq 4   0.4    ;; BACK    UN-SUNLIT
+     (fleq 5   0.32   ;; BOTTOM  UN-SUNLIT 
+           
+     (fleq 6   0.8    ;; TOP     SUNLIT
+     (fleq 7   0.6    ;; LEFT    SUNLIT
+     (fleq 8   0.6    ;; RIGHT   SUNLIT
+     (fleq 9   0.5    ;; FRONT   SUNLIT
+     (fleq 10  0.5    ;; BACK    SUNLIT
+     (fleq 11  0.4    ;; BOTTOM  SUNLIT
 
-                                                                             (fleq 12  1.0    ;; TOP     SUNLIT
-                                                                                   (fleq 13  0.7    ;; LEFT    SUNLIT
-                                                                                         (fleq 14  0.7    ;; RIGHT   SUNLIT
-                                                                                               (fleq 15  0.6    ;; FRONT   SUNLIT
-                                                                                                     (fleq 16  0.6    ;; BACK    SUNLIT
-                                                                                                           (fleq 17  0.5    ;; BOTTOM  SUNLIT
+     (fleq 12  1.0    ;; TOP     SUNLIT
+     (fleq 13  0.7    ;; LEFT    SUNLIT
+     (fleq 14  0.7    ;; RIGHT   SUNLIT
+     (fleq 15  0.6    ;; FRONT   SUNLIT
+     (fleq 16  0.6    ;; BACK    SUNLIT
+     (fleq 17  0.5    ;; BOTTOM  SUNLIT
 
-                                                                                                                 (fleq 18  1.0    ;; TOP     SUNLIT
-                                                                                                                       (fleq 19  0.85   ;; LEFT    SUNLIT
-                                                                                                                             (fleq 20  0.85   ;; RIGHT   SUNLIT
-                                                                                                                                   (fleq 21  0.75   ;; FRONT   SUNLIT
-                                                                                                                                         (fleq 22  0.75   ;; BACK    SUNLIT
-                                                                                                                                               (fleq 23  0.6    ;; BOTTOM  SUNLIT
-                                                                                                                                                     
-                                                                                                                                                     0.0)   ;; DEFAULT 
-                                                                                                                                               )))))))))))))))))))))))
+     (fleq 18  1.0    ;; TOP     SUNLIT
+     (fleq 19  0.85   ;; LEFT    SUNLIT
+     (fleq 20  0.85   ;; RIGHT   SUNLIT
+     (fleq 21  0.75   ;; FRONT   SUNLIT
+     (fleq 22  0.75   ;; BACK    SUNLIT
+     (fleq 23  0.6    ;; BOTTOM  SUNLIT
+         
+               0.0)   ;; DEFAULT 
+     )))))))))))))))))))))))
+     
      (if (> face-light-float 5)
          1.0
          1.1))))

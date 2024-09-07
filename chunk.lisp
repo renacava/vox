@@ -67,21 +67,17 @@
                                0.9)
              :sky-colour sky-colour
              :lod (float lod)
-             )
-      )))
+             ))))
+
 (defparameter lod 0f0)
-;;(defparameter chunks-per-step-host 200)
 
 (defun render-chunks ()
   (let ((n-chunks-rendered 0))
     (maphash (lambda (offset entry)
                (render (car entry)))
-             *chunks-at-offsets-table*)
-    
-    ))
+             *chunks-at-offsets-table*)))
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
-  ;;(setup-lparallel-kernel)
   (setf chunks-queued-to-be-freed? t)
   (setf queued-primordial-chunks nil)
   (let* ((chunk-offsets (loop for i below radius-x
@@ -89,31 +85,14 @@
                                            collect (list j 0 (truncate i)))))
          (offset-groups (group chunk-offsets 6)))
     (loop for offset in (reverse chunk-offsets)
-          do (push offset queued-primordial-chunks))
-    ;; (bt:make-thread
-    ;;  (lambda ()
-    ;;    (loop for offset-group in offset-groups
-    ;;          do (ignore-errors
-    ;;              (lparallel:pmapcar (lambda (offset)
-    ;;                                   (make-chunk offset
-    ;;                                               ;;(vws:make-random-chunk-blocks3d offset)
-    ;;                                               (vox-world-sample:make-random-chunk-blocks2d offset)
-    ;;                                               ;;(vox-world-sample:make-random-chunk-blocks2d-columns offset)
-    ;;                                               ;;(vox-world-sample::make-random-chunk-blocks-caved offset)
-    ;;                                               ;;(vox-world-sample:make-slicey-chunk offset)
-    ;;                                               width
-    ;;                                               height))
-    ;;                                 offset-group)))))
-    ))
+          do (push offset queued-primordial-chunks))))
 
 (defun regen-chunk (&optional (chunk-offset `(0 0 0)) (block-positions-and-symbols (vox-world-sample:make-random-chunk-blocks2d chunk-offset)))
   (let ((chunk (gethash chunk-offset *chunks-at-offsets-table*)))
     (when chunk
       (remhash chunk-offset *chunks-at-offsets-table*)
       (try-free (car chunk))))
-  (push chunk-offset queued-primordial-chunks)
-  ;;(vox::make-chunk chunk-offset block-positions-and-symbols)
-  )
+  (push chunk-offset queued-primordial-chunks))
 
 (defun make-chunk (chunk-offset block-positions-and-symbols &optional (width *chunk-width*) (height *chunk-height*))
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
@@ -126,12 +105,7 @@
                                 chunk-offset
                                 width
                                 height))))
-      (queue))
-    ;; (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols)
-    ;;              chunk-offset
-    ;;              width
-    ;;              height)
-    ))
+      (queue))))
 
 (defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
@@ -144,5 +118,4 @@
   (< chunk-queue-max-size (length queued-chunks)))
 
 (defun queue-chunk (mesh-data offset width height)
-  (push (list mesh-data offset width height) queued-chunks)
-  )
+  (push (list mesh-data offset width height) queued-chunks))
