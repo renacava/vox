@@ -243,7 +243,8 @@
                       ;;(make-chunks radius-x width *chunk-height* radius-z)
                       (setf (cepl:depth-test-function) #'<)
                       (gl:enable :depth-test)
-                      (setq my-depth-func (cepl:depth-test-function))
+                      (gl:enable :cull-face)
+                      ;;(setq my-depth-func (cepl:depth-test-function))
 
                       (setf texture-atlas-image-data
                                    (list
@@ -385,13 +386,14 @@
   (bt:make-thread (lambda () (loop (funcall chunk-gen-thread-func))) :name "chunk-gen-thread"))
 
 (defparameter chunk-gen-thread-func (lambda ()
-                                      (if queued-primordial-chunks
-                                          (let ((offset (pop queued-primordial-chunks)))
-                                            (make-chunk offset
-                                                        (vox-world-sample:make-random-chunk-blocks2d offset
-                                                                                                     lod
-                                                                                                     *chunk-width*)))
-                                          (sleep 0.0001))))
+                                      (livesupport:continuable
+                                        (if queued-primordial-chunks
+                                            (let ((offset (pop queued-primordial-chunks)))
+                                              (make-chunk offset
+                                                          (vox-world-sample:make-random-chunk-blocks2d offset
+                                                                                                       lod
+                                                                                                       *chunk-width*)))
+                                            (sleep 0.0001)))))
 
 (defparameter inner-loader-thread-func (lambda ()
                                          (when chunks-queued-to-be-freed?
