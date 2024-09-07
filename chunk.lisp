@@ -79,7 +79,7 @@
                :lod (float lod)
                )))))
 
-(defparameter lod 0f0)
+(defparameter lod 0)
 
 (defun make-chunks (radius-x &optional (width *chunk-width*) (height *chunk-height*) (radius-z radius-x))
   (setf chunks-queued-to-be-freed? t)
@@ -98,31 +98,45 @@
     (when chunk
       (setf chunk (car chunk))
       (setf blocks (or block-positions-and-symbols
-                       (vox-world-sample:make-random-chunk-blocks2d chunk-offset (width chunk) (height chunk))))
+                       (vox-world-sample:make-random-chunk-blocks2d (width chunk) (height chunk) chunk-offset lod)))
       (push (list chunk-offset (width chunk) (height chunk)) queued-primordial-chunks)
       (remhash chunk-offset *chunks-at-offsets-table*)
       (try-free chunk))))
 
 (defun make-chunk (chunk-offset block-positions-and-symbols width height)
   "Block-positions-and-symbols should be a list of sublists where each sublist is (x y z block-symbol)."
+  (declare (optimize (speed 3))
+           (type fixnum width height))
   (when block-positions-and-symbols   
-    (labels ((queue ()
-               (if (queue-full?)
-                   (progn (sleep 0.0001)
-                          (queue))
-                   (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width)
-                                chunk-offset
-                                width
-                                height))))
-      (queue))))
+    (if (queue-full?)
+        (progn (sleep 0.0001)
+               (make-chunk chunk-offset block-positions-and-symbols width height))
+        (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width height)
+                     chunk-offset
+                     width
+                     height))
+    ;;(try-queue-chunk chunk-offset block-positions-and-symbols width height)
+    ))
 
-(defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset chunk-width)
+(defun try-queue-chunk (chunk-offset block-positions-and-symbols width height)
+  (if (queue-full?)
+      (progn (sleep 0.0001)
+             (try-queue-chunk chunk-offset block-positions-and-symbols width height))
+      (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width height)
+                   chunk-offset
+                   width
+                   height)))
+
+(defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset chunk-width chunk-height)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
+  (declare (optimize (speed 3) (safety 0))
+           (type fixnum chunk-width chunk-height))
   (combine-blocks-verts-and-indices
    (make-blocks-verts-and-indices-from-positions-and-symbols
-    (remove-if-not (lambda (pos-and-symb) (last1 pos-and-symb)) block-positions-and-symbols)
-    chunk-offset
-    chunk-width)))
+    block-positions-and-symbols
+    (first chunk-offset) (second chunk-offset) (third chunk-offset)
+    chunk-width
+    chunk-height)))
 
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))

@@ -46,6 +46,10 @@
 (defun 3d-to-1d (x y z &optional (cols *chunk-width*) (depth *chunk-height*))
   (float (+ x (* y cols) (* z cols depth))))
 
+(defun 3d-to-1d-int (x y z &optional (cols *chunk-width*) (depth *chunk-height*))
+  (declare (type fixnum x y z cols depth))
+  (+ x (* y cols) (* z cols depth)))
+
 (defun 2d-to-1d (x y &optional (cols *texture-atlas-size*))
   (float (+ x (* y cols))))
 
@@ -116,33 +120,30 @@
       ;; (bt:with-lock-held (cache-lock)
       ;;   (or (gethash faces cache)
       ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
-      (combine-cube-faces (get-cube-faces (remove-duplicates faces)))
-      )))
+      (combine-cube-faces (get-cube-faces faces)))))
 
 (defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))
         (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
-                collect (let* ((face-float (third vert))
-                               (face-float
-                                 (+ face-float
-                                    (case distance-from-top-block
-                                      (0 18f0)
-                                      (1 12f0)
-                                      (2 12f0)
-                                      (3 12f0)
-                                      (4 12f0)
-                                      (5 6f0)
-                                      (6 6f0)
-                                      (7 6f0)
-                                      (8 6f0)
-                                      (t 0f0)))))
+                collect (let* ((face-int (third vert))
+                               (face-int (+ face-int
+                                            (case distance-from-top-block
+                                              (0 18)
+                                              (1 12)
+                                              (2 12)
+                                              (3 12)
+                                              (4 12)
+                                              (5 6)
+                                              (6 6)
+                                              (7 6)
+                                              (8 6)
+                                              (t 0)))))
                           
                           (list
                            (encode-vert-data1 (first vert)
-                                              (second vert)
-                                              0.0)
-                           (encode-vert-data2 face-float
+                                              (second vert))
+                           (encode-vert-data2 (float face-int)
                                               (2d-to-1d (getf mesh-instance :atlas-column)
                                                         (getf mesh-instance :atlas-row)
                                                         256))
@@ -153,7 +154,7 @@
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)
-  (loop for face in faces
+  (loop for face across faces
         when face
         collect (case face
                   (front cube-front)
@@ -164,9 +165,19 @@
                   (bottom cube-bottom))))
 
 (defun combine-cube-faces (cube-faces)
+  (let* ((index-offset 0))
+    (declare (type fixnum index-offset))
+    (list (loop for face in cube-faces ;;verts
+                append (car face))
+          (loop for face in cube-faces  ;; indices
+                append (loop for index fixnum in (cadr face)
+                             collect (+ index-offset index))
+                do (incf index-offset 4)))))
+
+(defun combine-mesh-faces (mesh-faces)
   (let* ((index-offset 0)
-         (vert-lists (mapcar #'first cube-faces))
-         (index-lists (mapcar #'second cube-faces))
+         (vert-lists (mapcar #'first mesh-faces))
+         (index-lists (mapcar #'second mesh-faces))
          (verts (loop for vert-list in vert-lists
                       append vert-list))
          (indices (loop for index-list in index-lists
@@ -228,7 +239,7 @@
 (defun encode-vert-data2 (face-light-float texture-atlas-index)
   (declare (type single-float face-light-float texture-atlas-index)
            (optimize (speed 3) (safety 0)))
-  (+ face-light-float (/ texture-atlas-index 100000))
+  (setq my-vert-data2 (+ face-light-float (/ texture-atlas-index 100000)))
   ;; (let* ((face-light-float face-light-float)
   ;;        (texture-atlas-index (/ texture-atlas-index 100000)))
   ;;   (+ face-light-float texture-atlas-index))

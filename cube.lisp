@@ -1,13 +1,16 @@
 (in-package #:vox)
 
-(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset chunk-width)
-  (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols chunk-width)))
+(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)
+  (declare (optimize (speed 3) (safety 0))
+           (type fixnum chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height))
+  (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols chunk-width chunk-height)))
          (chunk-block-solidity-array (first solidity-array-result))
          (top-blocks-array2D (second solidity-array-result))
-         (chunk-offset (vector (float (first chunk-offset))
-                               (float (second chunk-offset))
-                               (float (third chunk-offset)))))
-    (combine-cube-faces
+         )
+    (declare (type (simple-array bit) chunk-block-solidity-array)
+             (type (simple-array fixnum) top-blocks-array2d)
+             )
+    (combine-mesh-faces
      (loop for pos-and-symb in positions-and-symbols
            when (cadr pos-and-symb)
            collect (let* ((pos (car pos-and-symb))
@@ -15,14 +18,19 @@
                           (y (aref pos 1))
                           (z (aref pos 2))
                           (block-symbol (cadr pos-and-symb)))
+                     (declare (type (simple-array fixnum) pos)
+                              (type fixnum x y z))
                      (augment-cube-mesh-with-block-symbol-and-offset
                       (make-cube-faces-from-adjacent-solids
-                       x y z;;(vector x y z)
+                       x y z
                        chunk-block-solidity-array
-                       chunk-offset
-                       chunk-width)
+                       chunk-offset-x
+                       chunk-offset-y
+                       chunk-offset-z
+                       chunk-width
+                       chunk-height)
                       block-symbol 
-                      pos;;(list x y z)
+                      pos
                       chunk-width
                       (- (aref top-blocks-array2D x z) y)
                       ;;(= (aref top-blocks-array2D x z) y)
@@ -30,39 +38,28 @@
 
 
     ;; (loop for pos-and-symb in positions-and-symbols
-    ;;       when (last1 pos-and-symb)
-    ;;       collect (let ((x (first pos-and-symb))
-    ;;                     (y (second pos-and-symb))
-    ;;                     (z (third pos-and-symb))
-    ;;                     (block-symbol (last1 pos-and-symb)))
+    ;;       when (cadr pos-and-symb)
+    ;;       collect (let* ((pos (car pos-and-symb))
+    ;;                      (x (aref pos 0))
+    ;;                      (y (aref pos 1))
+    ;;                      (z (aref pos 2))
+    ;;                      (block-symbol (cadr pos-and-symb)))
     ;;                 (augment-cube-mesh-with-block-symbol-and-offset
     ;;                  (make-cube-faces-from-adjacent-solids
-    ;;                   (vector x y z)
+    ;;                   x y z
     ;;                   chunk-block-solidity-array
-    ;;                   (vec3 (float (first chunk-offset))
-    ;;                         (float (second chunk-offset))
-    ;;                         (float (third chunk-offset)))
-    ;;                   chunk-width)
+    ;;                   chunk-offset-x
+    ;;                   chunk-offset-y
+    ;;                   chunk-offset-z
+    ;;                   chunk-width
+    ;;                   chunk-height)
     ;;                  block-symbol 
-    ;;                  (list x y z)
+    ;;                  pos
     ;;                  chunk-width
     ;;                  (- (aref top-blocks-array2D x z) y)
     ;;                  ;;(= (aref top-blocks-array2D x z) y)
     ;;                  )))
-
-    ;; (loop for pos-and-symb in positions-and-symbols
-    ;;       when (last1 pos-and-symb)
-    ;;       collect (let ((x (float (first pos-and-symb)))
-    ;;                     (y (float (second pos-and-symb)))
-    ;;                     (z (float (third pos-and-symb)))
-    ;;                     (block-symbol (last1 pos-and-symb)))
-    ;;                 (make-cube-faces-from-adjacent-solids
-    ;;                  (vec3 x y z)
-    ;;                  chunk-block-solidity-array
-    ;;                  (vec3 (float (first chunk-offset))
-    ;;                        (float (second chunk-offset))
-    ;;                        (float (third chunk-offset)))
-    ;;                  chunk-width)))
+    
     
     ))
 
