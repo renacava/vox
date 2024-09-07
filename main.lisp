@@ -452,12 +452,19 @@
 
 (defparameter main-loop-func (lambda ()
                                (livesupport:continuable
-                                 (step-host)
-                                 (update-inputs)
-                                 (livesupport:update-repl-link)
-                                 (update-main-loop-fps)
-                                 (when limit-input-polling?
-                                   (sleep 0.0001)))))
+                                 (if *rendering-paused?*
+                                     (progn
+                                       (step-host)
+                                       (livesupport:update-repl-link)
+                                       (sleep 0.01))
+                                     (progn
+                                       (step-host)
+                                       (update-inputs)
+                                       (livesupport:update-repl-link)
+                                       (update-main-loop-fps)
+                                       (when limit-input-polling?
+                                         (sleep 0.0001))))
+                                 )))
 
 (defparameter fbo-render-loop-func (lambda ()
                                      (livesupport:continuable
