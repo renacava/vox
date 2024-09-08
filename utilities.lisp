@@ -1567,9 +1567,11 @@ It works because Common Lisp passes everything by value, not by reference, excep
     (get-output-stream-string s)))
 
 (defmethod func-size-in-bytes (func)
-  (let ((str (disassemble-to-string func)))
-    (parse-integer
-     (subseq str (+ 6 (search "Size: " str)) (search " bytes" str)))))
+  (if (listp func)
+      (mapcar #'func-size-in-bytes func)
+      (let ((str (disassemble-to-string func)))
+        (parse-integer
+         (subseq str (+ 6 (search "Size: " str)) (search " bytes" str))))))
 
 ;; path-to-function breaks utilities.lisp when loading on sbcl 2.3.x; though it works fine on sbcl 2.0.0.
 ;; (defun path-to-function (function-name)
