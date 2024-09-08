@@ -58,69 +58,118 @@
     (let ((face-float (face-direction-to-float 'front)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 0.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 0.0 0.0 2) face-float)
+
         (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 0.0 1.0 2) face-float)
-        (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 0.0 0.0 2) face-float))
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2)  (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2)  (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        
+        )
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-front
     (let ((face-float (face-direction-to-float 'back)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
-        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+
+
         (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
-        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float))
+        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        )
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-left 
     (let ((face-float (face-direction-to-float 'left)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+
         (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
         (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
-        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float))
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        )
        (list 1 2 0 2 3 0))))
 
   (defparameter cube-right 
     (let ((face-float (face-direction-to-float 'right)))
       (list
        (list
+        ;; (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
         (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
         (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
-        (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
-        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float))
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        )
        (list 3 2 0 1 3 0))))
 
   (defparameter cube-top 
     (let ((face-float (face-direction-to-float 'top)))
       (list
        (list
-        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
-        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+
         (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
-        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float))
+        (list (3d-to-1d 0.0 1.0 0.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 1.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 1.0 0.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 1.0 1.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        
+        )
        (list 2 1 0 3 2 0))))
 
   (defparameter cube-bottom 
     (let ((face-float (face-direction-to-float 'bottom)))
       (list
        (list
+        ;; (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        ;; (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+
+        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
+        (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
         (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
         (list (3d-to-1d 1.0 0.0 0.0 2 2) (2d-to-1d 1.0 1.0 2) face-float)
-        (list (3d-to-1d 0.0 0.0 0.0 2 2) (2d-to-1d 0.0 1.0 2) face-float)
-        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float))
-       (list 2 1 0 1 3 0))))
+        (list (3d-to-1d 1.0 0.0 1.0 2 2) (2d-to-1d 1.0 0.0 2) face-float)
+        (list (3d-to-1d 0.0 0.0 1.0 2 2) (2d-to-1d 0.0 0.0 2) face-float)
+        )
+       (list 2 1 0 1 3 0)))))
 
-  (let ((cache (make-hash-table :test #'equal))
-        (cache-lock (bt:make-lock)))
-    (defun build-cube-mesh-from-faces (faces)
-      ;; (bt:with-lock-held (cache-lock)
-      ;;   (or (gethash faces cache)
-      ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
-      (combine-mesh-faces (get-cube-faces (coerce faces 'vector))))))
+(defun build-cube-mesh-from-faces (faces)
+  ;; (bt:with-lock-held (cache-lock)
+  ;;   (or (gethash faces cache)
+  ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
+  (combine-mesh-faces (get-cube-faces (coerce faces 'vector))))
 
 (defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))

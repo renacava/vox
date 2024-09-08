@@ -346,6 +346,7 @@
                                             (sleep 0.0001)))))
 
 (defparameter inner-loader-thread-func (lambda ()
+                                         ;;(gl:enable :cull-face)
                                          (when chunks-queued-to-be-freed?
                                            (maphash (lambda (offset entry)
                                                       (try-free (car entry)))
@@ -364,7 +365,7 @@
                                                   (buffer-stream (when (and vert-array index-array)
                                                                    (make-buffer-stream
                                                                     vert-array
-                                                                    :index-array index-array
+                                                                    ;;:index-array index-array
                                                                     :retain-arrays nil
                                                                     )))
                                                   (chunk (when buffer-stream
