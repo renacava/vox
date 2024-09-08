@@ -45,39 +45,22 @@
                (setf (aref block-array index) (if solid? 1 0))))
     (values block-array xz-y-array)))
 
-(progn
-  (defmacro define-solid-func (name x y z)
-   `(defun ,name (x y z chunk-block-array chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)
-      (declare (type fixnum x y z chunk-offset-x chunk-offset-y chunk-offset-z)
-               (type unsigned-byte chunk-width chunk-height)
-               (optimize (speed 3) (safety 0)))
-      (pos-solid ,x ,y ,z chunk-block-array chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)))
-
-
-  (define-solid-func solid-above-p x (1+ y) z)
-  (define-solid-func solid-below-p x (1- y) z)
-  (define-solid-func solid-left-p (1- x) y z)
-  (define-solid-func solid-right-p (1+ x) y z)
-  (define-solid-func solid-ahead-p x y (1+ z))
-  (define-solid-func solid-behind-p x y (1- z)))
-
 (defun make-cube-faces-from-adjacent-solids (x y z chunk-block-array chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)
   (declare (type fixnum x y z chunk-width chunk-height chunk-offset-x chunk-offset-y chunk-offset-z)
            (type (simple-array bit) chunk-block-array)
            (optimize (speed 3) (safety 0)))
-  (flet ((query-pos (solidity-func face)
-           (when (not (funcall solidity-func x y z chunk-block-array chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height))
+  (flet ((is-block-solid? (x y z face)
+           (unless (pos-solid x y z chunk-block-array chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)
              face)))
     (combine-cube-faces
-     (loop for face across (vector (query-pos #'solid-above-p cube-top)
-                                   (query-pos #'solid-below-p cube-bottom)
-                                   (query-pos #'solid-right-p cube-right)
-                                   (query-pos #'solid-left-p cube-left)
-                                   (query-pos #'solid-ahead-p cube-front)
-                                   (query-pos #'solid-behind-p cube-back))
+     (loop for face across (vector (is-block-solid? x (1+ y) z cube-top)
+                                   (is-block-solid? x (1- y) z cube-bottom)
+                                   (is-block-solid? (1+ x) y z cube-right)
+                                   (is-block-solid? (1- x) y z cube-left)
+                                   (is-block-solid? x y (1+ z) cube-front)
+                                   (is-block-solid? x y (1- z) cube-back))
            when face
            collect face))))
-
 
 (defparameter interchunk-culling? t)
 

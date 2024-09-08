@@ -71,3 +71,13 @@
   )
 
 (setup-mesh-table)
+
+
+(defparameter lod-chunk-verts (list (list (vec3 0.0 0.0 0.0) (vec2 0.0 0.0))
+                                    (list (vec3 1.0 0.0 0.0) (vec2 0.0 0.0))
+                                    (list (vec3 1.0 1.0 0.0) (vec2 0.0 0.0))
+                                    (list (vec3 0.0 1.0 0.0) (vec2 0.0 0.0))
+                                    (list (vec3 0.0 0.0 1.0) (vec2 0.0 0.0))
+                                    (list (vec3 1.0 0.0 1.0) (vec2 0.0 0.0))
+                                    (list (vec3 1.0 1.0 1.0) (vec2 0.0 0.0))
+                                    (list (vec3 0.0 1.0 1.0) (vec2 0.0 0.0))))

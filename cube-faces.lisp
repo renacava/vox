@@ -120,7 +120,7 @@
       ;; (bt:with-lock-held (cache-lock)
       ;;   (or (gethash faces cache)
       ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
-      (combine-cube-faces (get-cube-faces faces)))))
+      (combine-mesh-faces (get-cube-faces (coerce faces 'vector))))))
 
 (defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width &optional (distance-from-top-block 0))
   (let ((verts (first cube-mesh))
