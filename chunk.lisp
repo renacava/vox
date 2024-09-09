@@ -32,63 +32,99 @@
   (bt:with-lock-held (chunk-table-lock)
     (remhash (coerce (offset chunk) 'list) *chunks-at-offsets-table*))
   (let* ((vert-array (vert-array chunk))
-         (index-array (index-array chunk))
-         (buffer-stream (buffer-stream chunk)))
-    (try-free-objects buffer-stream index-array vert-array)
+         ;;(index-array (index-array chunk))
+         ;;(buffer-stream (buffer-stream chunk))
+         )
+    ;;(try-free-objects buffer-stream index-array vert-array)
+    (try-free vert-array)
     (setf chunk nil)))
 
 (defmethod render ((things-to-render list))
   (mapcar #'render things-to-render))
 
+(defparameter *shared-gpu-arrays* nil)
+(defparameter *shared-gpu-arrays-length* 0)
+(defparameter *shared-gpu-arrays-outdated?* nil)
+(defparameter *chunks-buffer* nil)
+
+(defun rebuffer-chunk-gpu-arrays ()
+  (mapcar #'try-free *shared-gpu-arrays*)
+  (try-free *chunks-buffer*)
+  (when (and (boundp 'my-cool-gpu-buffer) my-cool-gpu-buffer)
+    (try-free my-cool-gpu-buffer))
+  (let* ((c-arrays (all-chunk-vert-arrays)))
+    (when c-arrays
+      (setq my-cool-gpu-buffer (make-gpu-buffer :initial-contents c-arrays))
+      (setf *shared-gpu-arrays* (make-gpu-arrays c-arrays)
+            *shared-gpu-arrays-length* (c-arrays-total-length c-arrays)
+            *chunks-buffer* (make-buffer-stream *shared-gpu-arrays* :length *shared-gpu-arrays-length*)
+            )))
+  ;;(setf *shared-gpu-arrays-outdated?* nil)
+  )
+
+
 (let ((tri-total 0)
+      ;;(chunks-buffer)
       (gate t))
   (defun render-chunks ()
     (setf tri-total 0)
-
+    ;;(when *shared-gpu-arrays-outdated?* (rebuffer-chunk-gpu-arrays))
+    (let* ()
+      ;; (when gate
+      ;;   (setq my-cool-buffer (make-buffer-stream my-cool-gpu-buffer :length *shared-gpu-arrays-length*)))
+      (when (and *chunks-buffer* (< 0 (buffer-stream-length *chunks-buffer*)))
+        (map-g #'chunk-pipeline *chunks-buffer*
+               :cam-pos camera-current-pos
+               :cam-rot camera-current-rot
+               :now *now*
+               :proj *projection-matrix*
+               :chunk-width 16
+               :chunk-height 128
+               :texture-atlas-ssbo texture-atlas-ssbo
+               :atlas-size *texture-atlas-size*
+               :skylight-colour skylight-colour
+               :sky-colour sky-colour
+               :lod (float lod)
+               ))
+      (incf tri-total (/ *shared-gpu-arrays-length* 3))
+      )
+    
     ;; (let* ((chunk1 (car (gethash `(0 0 0) *chunks-at-offsets-table*)))
     ;;        (chunk2 (car (gethash `(1 0 0) *chunks-at-offsets-table*)))
     ;;        (verts1 (vert-array chunk1))
     ;;        (verts2 (vert-array chunk2))
-    ;;        (vert-arrays (list verts1 verts2))
-    ;;        (light-level (max (aref sky-colour 0)
-    ;;                          (aref sky-colour 1)
-    ;;                          (aref sky-colour 2)
-    ;;                          0.1)))
+    ;;        (v1-length (first (gpu-array-dimensions verts1)))
+    ;;        (v2-length (first (gpu-array-dimensions verts2)))
+    ;;        (total-length (+ v1-length v2-length)))
 
       
     ;;   (when gate
     ;;     (setq my-c-arrays (list (pull1-g verts1)
     ;;                             (pull1-g verts2)))
     ;;     (setq my-gpu-arrays (make-gpu-arrays my-c-arrays))
-    ;;     (setq my-cool-buffer (make-buffer-stream my-gpu-arrays :length 4332))
+    ;;     (setq my-cool-buffer (make-buffer-stream my-gpu-arrays :length total-length))
     ;;     (setf gate nil))
       
-    ;;   ;;(incf tri-total (/ (first (gpu-array-dimensions (index-array chunk1))) 3))
-    ;;   ;; (map-g #'chunk-pipeline my-cool-buffer
-    ;;   ;;        :cam-pos camera-current-pos
-    ;;   ;;        :cam-rot camera-current-rot
-    ;;   ;;        :now *now*
-    ;;   ;;        :proj *projection-matrix*
-    ;;   ;;        :offset (vec3 0.0 0.0 0.0)
-    ;;   ;;        :chunk-width (truncate (width chunk1))
-    ;;   ;;        :chunk-height (truncate (height chunk1))
-    ;;   ;;        :texture-atlas-ssbo texture-atlas-ssbo
-    ;;   ;;        :atlas-size *texture-atlas-size*
-    ;;   ;;        :skylight-colour (lerp-vec3
-    ;;   ;;                          (vec3 (aref sky-colour 0)
-    ;;   ;;                                (aref sky-colour 1)
-    ;;   ;;                                (aref sky-colour 2))
-    ;;   ;;                          (vec3 light-level light-level light-level)
-    ;;   ;;                          0.9)
-    ;;   ;;        :sky-colour sky-colour
-    ;;   ;;        :lod (float lod)
-    ;;   ;;        )
+    ;;   (incf tri-total (/ (first (gpu-array-dimensions (index-array chunk1))) 3))
+    ;;   (map-g #'chunk-pipeline my-cool-buffer
+    ;;          :cam-pos camera-current-pos
+    ;;          :cam-rot camera-current-rot
+    ;;          :now *now*
+    ;;          :proj *projection-matrix*
+    ;;          :chunk-width (truncate (width chunk1))
+    ;;          :chunk-height (truncate (height chunk1))
+    ;;          :texture-atlas-ssbo texture-atlas-ssbo
+    ;;          :atlas-size *texture-atlas-size*
+    ;;          :skylight-colour skylight-colour
+    ;;          :sky-colour sky-colour
+    ;;          :lod (float lod)
+    ;;          )
     ;;   )
     
     
-    (maphash (lambda (offset entry)
-               (render (car entry)))
-             *chunks-at-offsets-table*)
+    ;; (maphash (lambda (offset entry)
+    ;;            (render (car entry)))
+    ;;          *chunks-at-offsets-table*)
     tri-total)
 
   (defmethod render ((chunk chunk))
@@ -108,6 +144,19 @@
              :skylight-colour skylight-colour
              :sky-colour sky-colour
              :lod (float lod)))))
+
+(defun all-chunk-vert-arrays ()
+  (let (result)
+    (maphash (lambda (offset entry)
+               (push (vert-array (car entry)) result))
+             *chunks-at-offsets-table*)
+    result))
+
+(defun c-arrays-lengths (c-arrays)
+  (mapcar #'first (mapcar #'c-array-dimensions c-arrays)))
+
+(defun c-arrays-total-length (c-arrays)
+  (apply #'+ (c-arrays-lengths c-arrays)))
 
 (defparameter lod 0)
 

@@ -69,6 +69,8 @@
              (car blocks-verts-and-indices)
              (cadr blocks-verts-and-indices))
     (let* ((vert-c-array  (make-c-array (first blocks-verts-and-indices) :element-type 'block-vert))
-           (index-c-array (make-c-array (second blocks-verts-and-indices) :element-type :uint)))
-      (list vert-c-array index-c-array)))
+           ;;(index-c-array (make-c-array (second blocks-verts-and-indices) :element-type :uint))
+           )
+      (list vert-c-array ;;index-c-array
+            )))
   )

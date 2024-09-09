@@ -59,7 +59,7 @@
          ;;(x gl-draw-id)
          (chunk-offset (block-vert-chunk-offset vert))
          
-         (chunk-offset (* chunk-offset chunk-width))
+         (chunk-offset (* chunk-offset chunk-width 1.1))
          (pos (+ pos (vec4 chunk-offset 0)))
          (pos (* pos 0.5))
          
@@ -373,30 +373,25 @@
                                                   (offset (v! (second queued-chunk)))
                                                   (width (third queued-chunk))
                                                   (height (fourth queued-chunk))
-                                                  (vert-array (ignore-errors (make-gpu-array (first mesh-data))))
-                                                  (index-array (ignore-errors (make-gpu-array (second mesh-data) :element-type :uint)))
-                                                  (buffer-stream (when (and vert-array index-array)
-                                                                   (make-buffer-stream
-                                                                    vert-array
-                                                                    ;;:index-array index-array
-                                                                    :retain-arrays nil
-                                                                    )))
-                                                  (chunk (when buffer-stream
+                                                  (vert-array (first mesh-data))
+                                                  (chunk (when vert-array
                                                            (make-instance 'chunk
                                                                           :width width
                                                                           :height height
                                                                           :offset offset
                                                                           :vert-array vert-array
-                                                                          :index-array index-array
-                                                                          :buffer-stream buffer-stream))))
-                                             (try-free-objects (first mesh-data) (second mesh-data))
+                                                                          ))))
                                              (if chunk
                                                  (let* ((offset (second queued-chunk))
                                                         (existing-chunk (gethash offset *chunks-at-offsets-table*)))
                                                    (when existing-chunk (try-free (first existing-chunk)))
-                                                   (setf (gethash offset *chunks-at-offsets-table*) (list chunk buffer-stream)))
+                                                   (setf (gethash offset *chunks-at-offsets-table*) (list chunk ;;buffer-stream
+                                                                                                          ))
+                                                   (rebuffer-chunk-gpu-arrays)
+                                                   )
                                                  
-                                                 (try-free-objects vert-array index-array))))))
+                                                 ;;(try-free-objects vert-array index-array)
+                                                 )))))
 
 (defun get-cepl-context-surface-resolution ()
   (surface-resolution (current-surface (cepl-context))))
