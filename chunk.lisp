@@ -86,10 +86,9 @@
     ;;   )
     
     
-    (let ((n-chunks-rendered 0))
-      (maphash (lambda (offset entry)
-                 (render (car entry)))
-               *chunks-at-offsets-table*))
+    (maphash (lambda (offset entry)
+               (render (car entry)))
+             *chunks-at-offsets-table*)
     tri-total)
 
   (defmethod render ((chunk chunk))
