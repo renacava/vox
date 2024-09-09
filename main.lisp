@@ -27,7 +27,8 @@
 (defstruct-g block-vert
   (data1 :float)
   (data2 :float)
-  (local-offset :float))
+  (local-offset :float)
+  (chunk-offset :vec3))
 
 (defun-g vert-stage ((vert block-vert)
                      &uniform
@@ -55,8 +56,11 @@
          (pos (* pos (+ 1.0 (* 1.0 lod))))
          (pos (+ pos (1d-to-3d local-offset-index chunk-width chunk-height)))
          (pos (vec4 pos 1))
-         (offset (* offset chunk-width))
-         (pos (+ pos (vec4 offset 0)))
+         ;;(x gl-draw-id)
+         (chunk-offset (block-vert-chunk-offset vert))
+         
+         (chunk-offset (* chunk-offset chunk-width))
+         (pos (+ pos (vec4 chunk-offset 0)))
          (pos (* pos 0.5))
          
          (now (* 1.5 now))
@@ -65,7 +69,9 @@
          (atlas-coords (1d-to-2d texture-atlas-index 256))
          (uv (1d-to-2d uv 2.0))
          (uv (calc-uv (aref atlas-coords 0) (aref atlas-coords 1) atlas-size uv))
-         (pos (* proj pos rot)))
+         (pos (* proj pos rot))
+         ;;(x gl-draw-id)
+         )
     
     (values pos
             uv
@@ -344,6 +350,13 @@
                                                           width
                                                           height))
                                             (sleep 0.0001)))))
+
+(defstruct-g my-bits
+  (bit1 :bool)
+  (bit2 :bool))
+
+(defun-g my-cool-func ((my-data my-bits))
+  my-data)
 
 (defparameter inner-loader-thread-func (lambda ()
                                          ;;(gl:enable :cull-face)

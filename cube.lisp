@@ -1,6 +1,6 @@
 (in-package #:vox)
 
-(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height)
+(defun make-blocks-verts-and-indices-from-positions-and-symbols (positions-and-symbols chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height chunk-offset-vec3)
   (declare (optimize (speed 3) (safety 0))
            (type fixnum chunk-offset-x chunk-offset-y chunk-offset-z chunk-width chunk-height))
   (let* ((solidity-array-result (multiple-value-list (make-chunk-block-solidity-array-from-positions-and-symbols positions-and-symbols chunk-width chunk-height)))
@@ -33,6 +33,7 @@
                       pos
                       chunk-width
                       (- (aref top-blocks-array2D x z) y)
+                      chunk-offset-vec3
                       ;;(= (aref top-blocks-array2D x z) y)
                       ))))
 

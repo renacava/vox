@@ -40,9 +40,52 @@
 (defmethod render ((things-to-render list))
   (mapcar #'render things-to-render))
 
-(let ((tri-total 0))
+(let ((tri-total 0)
+      (gate t))
   (defun render-chunks ()
     (setf tri-total 0)
+
+    ;; (let* ((chunk1 (car (gethash `(0 0 0) *chunks-at-offsets-table*)))
+    ;;        (chunk2 (car (gethash `(1 0 0) *chunks-at-offsets-table*)))
+    ;;        (verts1 (vert-array chunk1))
+    ;;        (verts2 (vert-array chunk2))
+    ;;        (vert-arrays (list verts1 verts2))
+    ;;        (light-level (max (aref sky-colour 0)
+    ;;                          (aref sky-colour 1)
+    ;;                          (aref sky-colour 2)
+    ;;                          0.1)))
+
+      
+    ;;   (when gate
+    ;;     (setq my-c-arrays (list (pull1-g verts1)
+    ;;                             (pull1-g verts2)))
+    ;;     (setq my-gpu-arrays (make-gpu-arrays my-c-arrays))
+    ;;     (setq my-cool-buffer (make-buffer-stream my-gpu-arrays :length 4332))
+    ;;     (setf gate nil))
+      
+    ;;   ;;(incf tri-total (/ (first (gpu-array-dimensions (index-array chunk1))) 3))
+    ;;   ;; (map-g #'chunk-pipeline my-cool-buffer
+    ;;   ;;        :cam-pos camera-current-pos
+    ;;   ;;        :cam-rot camera-current-rot
+    ;;   ;;        :now *now*
+    ;;   ;;        :proj *projection-matrix*
+    ;;   ;;        :offset (vec3 0.0 0.0 0.0)
+    ;;   ;;        :chunk-width (truncate (width chunk1))
+    ;;   ;;        :chunk-height (truncate (height chunk1))
+    ;;   ;;        :texture-atlas-ssbo texture-atlas-ssbo
+    ;;   ;;        :atlas-size *texture-atlas-size*
+    ;;   ;;        :skylight-colour (lerp-vec3
+    ;;   ;;                          (vec3 (aref sky-colour 0)
+    ;;   ;;                                (aref sky-colour 1)
+    ;;   ;;                                (aref sky-colour 2))
+    ;;   ;;                          (vec3 light-level light-level light-level)
+    ;;   ;;                          0.9)
+    ;;   ;;        :sky-colour sky-colour
+    ;;   ;;        :lod (float lod)
+    ;;   ;;        )
+    ;;   )
+    
+    
     (let ((n-chunks-rendered 0))
       (maphash (lambda (offset entry)
                  (render (car entry)))
@@ -53,31 +96,19 @@
     (let ((buffer-stream (buffer-stream chunk)))
       (when (and buffer-stream
                  (< 0 (buffer-stream-length buffer-stream))))
-      (let ((light-level (max (aref sky-colour 0)
-                              (aref sky-colour 1)
-                              (aref sky-colour 2)
-                              0.1)))
-
-        (incf tri-total (/ (first (gpu-array-dimensions (index-array chunk))) 3))
-        (map-g #'chunk-pipeline buffer-stream
-               :cam-pos camera-current-pos
-               :cam-rot camera-current-rot
-               :now *now*
-               :proj *projection-matrix*
-               :offset (offset chunk)
-               :chunk-width (truncate (width chunk))
-               :chunk-height (truncate (height chunk))
-               :texture-atlas-ssbo texture-atlas-ssbo
-               :atlas-size *texture-atlas-size*
-               :skylight-colour (lerp-vec3
-                                 (vec3 (aref sky-colour 0)
-                                       (aref sky-colour 1)
-                                       (aref sky-colour 2))
-                                 (vec3 light-level light-level light-level)
-                                 0.9)
-               :sky-colour sky-colour
-               :lod (float lod)
-               )))))
+      (incf tri-total (/ (first (gpu-array-dimensions (index-array chunk))) 3))
+      (map-g #'chunk-pipeline buffer-stream
+             :cam-pos camera-current-pos
+             :cam-rot camera-current-rot
+             :now *now*
+             :proj *projection-matrix*
+             :chunk-width (truncate (width chunk))
+             :chunk-height (truncate (height chunk))
+             :texture-atlas-ssbo texture-atlas-ssbo
+             :atlas-size *texture-atlas-size*
+             :skylight-colour skylight-colour
+             :sky-colour sky-colour
+             :lod (float lod)))))
 
 (defparameter lod 0)
 
@@ -118,25 +149,33 @@
     ;;(try-queue-chunk chunk-offset block-positions-and-symbols width height)
     ))
 
-(defun try-queue-chunk (chunk-offset block-positions-and-symbols width height)
-  (if (queue-full?)
-      (progn (sleep 0.0001)
-             (try-queue-chunk chunk-offset block-positions-and-symbols width height))
-      (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width height)
-                   chunk-offset
-                   width
-                   height)))
+;; (defun try-queue-chunk (chunk-offset block-positions-and-symbols width height)
+;;   (if (queue-full?)
+;;       (progn (sleep 0.0001)
+;;              (try-queue-chunk chunk-offset block-positions-and-symbols width height))
+;;       (queue-chunk (make-chunk-mesh-from-data block-positions-and-symbols chunk-offset width height)
+;;                    (setq my-offset1 chunk-offset)
+;;                    width
+;;                    height)))
 
 (defun make-chunk-mesh-from-data (block-positions-and-symbols chunk-offset chunk-width chunk-height)
   "Returns the mesh-data for a chunk made of the given block-symbols at given block-positions."
   (declare (optimize (speed 3) (safety 0))
            (type fixnum chunk-width chunk-height))
-  (combine-blocks-verts-and-indices
-   (make-blocks-verts-and-indices-from-positions-and-symbols
-    block-positions-and-symbols
-    (first chunk-offset) (second chunk-offset) (third chunk-offset)
-    chunk-width
-    chunk-height)))
+  (let ((chunk-x (first chunk-offset))
+        (chunk-y (second chunk-offset))
+        (chunk-z (third chunk-offset)))
+    (declare (type fixnum chunk-x chunk-y chunk-z))
+    ;;(setq my-offset4 (list chunk-x chunk-y chunk-z))
+    ;;(setq my-offset5 (vec3 chunk-x chunk-y chunk-z))
+    (combine-blocks-verts-and-indices
+     (make-blocks-verts-and-indices-from-positions-and-symbols
+      block-positions-and-symbols
+      chunk-x chunk-y chunk-z
+      chunk-width
+      chunk-height
+      (vec3 (float chunk-x) (float chunk-y) (float chunk-z)))))
+  )
 
 (defun queue-full? ()
   (< chunk-queue-max-size (length queued-chunks)))

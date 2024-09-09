@@ -25,6 +25,7 @@
                  )))
   
 (defparameter sky-colour (vec4 0.0 0.0 0.0 1.0))
+(defparameter skylight-colour (vec4 0f0 0f0 0f0 1f0))
 
 (defun-g star-vert ((vert :vec4)
                     &uniform
@@ -169,7 +170,17 @@
           (vec4 (aref sky-col 0)
                 (aref sky-col 1)
                 (aref sky-col 2)
-                1.0))))
+                1.0))
+    (let ((light-level (max (aref sky-colour 0)
+                            (aref sky-colour 1)
+                            (aref sky-colour 2)
+                            0.1)))
+      (setf skylight-colour (lerp-vec3
+                             (vec3 (aref sky-colour 0)
+                                   (aref sky-colour 1)
+                                   (aref sky-colour 2))
+                             (vec3 light-level light-level light-level)
+                             0.9)))))
 
 (let (sky-buffer)
   (defparameter sky-box

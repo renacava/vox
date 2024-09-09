@@ -171,7 +171,7 @@
   ;;       (setf (gethash faces cache) (combine-cube-faces (get-cube-faces (remove-duplicates faces))))))
   (combine-mesh-faces (get-cube-faces (coerce faces 'vector))))
 
-(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width &optional (distance-from-top-block 0))
+(defun augment-cube-mesh-with-block-symbol-and-offset (cube-mesh block-symbol offset chunk-width distance-from-top-block chunk-offset-vec3)
   (let ((verts (first cube-mesh))
         (mesh-instance (get-mesh-bound-to-block-symbol block-symbol)))
     (list (loop for vert in verts
@@ -199,7 +199,10 @@
                            (3d-to-1d (aref offset 0)
                                      (aref offset 1)
                                      (aref offset 2)
-                                     chunk-width))))
+                                     chunk-width)
+                           (setq my-chunk-offset chunk-offset-vec3)
+                           
+                           )))
           (second cube-mesh))))
 
 (defun get-cube-faces (faces)
@@ -277,12 +280,7 @@
 (defun encode-vert-data1 (pos-index uv-index)
   (declare (type single-float pos-index uv-index)
            (optimize (speed 3) (safety 0)))
-  (+ (/ pos-index 10) (/ uv-index 100))
-  ;; (let* ((local-offset local-offset-index)
-  ;;        (pos-index (/ pos-index 10))
-  ;;        (uv-index (/ uv-index 100)))
-    
-  ;;   (+ local-offset pos-index uv-index))
+  (+ (/ pos-index 10.0) (/ uv-index 100.0))
   )
 
 (defun encode-vert-data2 (face-light-float texture-atlas-index)
