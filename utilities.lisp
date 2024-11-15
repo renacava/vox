@@ -1621,6 +1621,23 @@ It works because Common Lisp passes everything by value, not by reference, excep
                  (mapcar #'new-func inner-args))))
     #'new-func))
 
+(defun make-treewalker2 (func)
+  (labels ((new-func (inner-args)
+             (let ((inner-args (resolve inner-args)))
+               (if (atom inner-args)
+                   (funcall func inner-args)
+                   (mapcar #'new-func inner-args)))))
+    #'new-func))
+
+(defun make-treewalker2 (func)
+  (labels ((new-func (inner-args)
+             (let ((inner-args (resolve inner-args))
+                   (initial-result (gensym)))
+               (if (atom inner-args)
+                   (or (setf initial-result (ignore-errors (funcall func inner-args))) inner-args)
+                   (mapcar #'new-func inner-args)))))
+    #'new-func))
+
 (defun make-hashwalker (func)
   (labels ((new-func (inner-args)
              (if (hash-table-p inner-args)
